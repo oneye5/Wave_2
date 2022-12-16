@@ -14,8 +14,8 @@ using UnityEngine;
 public class HighLevelNetcode : MonoBehaviour
 {
     public const string KEY_JOINCODE = "RELAYKEY";
-    public const string KEY_MAP= "MAP";
-    public const string KEY_MODE = "MAP";
+    public const string KEY_MAP = "MAP";
+    public const string KEY_MODE = "MODE";
 
     const int defaultPlayerCount = 8;
 
@@ -27,9 +27,17 @@ public class HighLevelNetcode : MonoBehaviour
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
     }
     //high level stuffs
-    public void QuickJoin()
+    public async void QuickPlay() //joins a lobby, if none exist, create one
     {
+        //add more advanced way of picking a lobby in the future
+        var lobbies = await getLobbies();
+        if(lobbies.Count != 0)
+        {
+            await joinLobby(lobbies[0]);
+            return;
+        }
 
+        QuickCreateGame();
     }
     public async Task<bool> JoinGame(Lobby l)
     {
@@ -40,7 +48,7 @@ public class HighLevelNetcode : MonoBehaviour
 
         return true;
     }
-    public async void CreateGame(int maxPlayers,string lobbyname,int map,int mode)
+    public async void CreateGame(int maxPlayers , string lobbyname , int map , int mode)
     {
         var joinCode = await createRelay();
         await createLobby(joinCode);
@@ -48,11 +56,23 @@ public class HighLevelNetcode : MonoBehaviour
     }
     public async void QuickCreateGame()
     {
-         var joinCode = await createRelay();
+        var joinCode = await createRelay();
         await createLobby(joinCode);
         NetworkManager.Singleton.StartHost();
     }
-
+    public async Task<List<Lobby>> getLobbies()
+    {
+        try
+        {
+            var Responce = await Lobbies.Instance.QueryLobbiesAsync();
+            return Responce.Results;
+        }
+        catch(LobbyServiceException x)
+        {
+            Debug.Log(x);
+            return null;
+        }
+    }
 
 
     // relay system
