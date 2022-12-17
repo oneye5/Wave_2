@@ -9,6 +9,7 @@ using Unity.Services.Core;
 using Unity.Services.Lobbies;
 using Unity.Services.Lobbies.Models;
 using Unity.Services.Relay;
+using Unity.Services.Relay.Models;
 using UnityEngine;
 
 public class HighLevelNetcode : MonoBehaviour
@@ -16,9 +17,10 @@ public class HighLevelNetcode : MonoBehaviour
     public const string KEY_JOINCODE = "RELAYKEY";
     public const string KEY_MAP = "MAP";
     public const string KEY_MODE = "MODE";
+    public const string KEY_REGION = "REGION";
 
     const int defaultPlayerCount = 8;
-
+    public List<GameObject> mapPrefabs;
 
     bool inGame = false;
     async void Start()
@@ -50,14 +52,14 @@ public class HighLevelNetcode : MonoBehaviour
     }
     public async void CreateGame(int maxPlayers , string lobbyname , int map , int mode)
     {
-        var joinCode = await createRelay();
-        await createLobby(joinCode);
+        var relayData = await createRelay();
+        await createLobby(relayData.joinCode,relayData.alloc.Region);
         NetworkManager.Singleton.StartHost();
     }
     public async void QuickCreateGame()
     {
-        var joinCode = await createRelay();
-        await createLobby(joinCode);
+        var relayData = await createRelay();
+        await createLobby(relayData.joinCode,relayData.alloc.Region);
         NetworkManager.Singleton.StartHost();
     }
     public async Task<List<Lobby>> getLobbies()
@@ -65,6 +67,7 @@ public class HighLevelNetcode : MonoBehaviour
         try
         {
             var Responce = await Lobbies.Instance.QueryLobbiesAsync();
+
             return Responce.Results;
         }
         catch(LobbyServiceException x)
@@ -76,7 +79,7 @@ public class HighLevelNetcode : MonoBehaviour
 
 
     // relay system
-    public async Task<String> createRelay() //returns the join code
+    public async Task<RelayData> createRelay() //returns the join code
     {
         try
         {
@@ -88,8 +91,13 @@ public class HighLevelNetcode : MonoBehaviour
             //crreate connection
             var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
             var relayData = new RelayServerData(allocation , "dtls");
+            
             transport.SetRelayServerData(relayData);
-            return joinCode;
+
+            RelayData outData = new RelayData();
+            outData.joinCode = joinCode;
+            outData.alloc = allocation;
+            return outData;
         }
         catch(RelayServiceException e)
         {
@@ -126,7 +134,7 @@ public class HighLevelNetcode : MonoBehaviour
             return null;
         }
     }
-    public async Task<Lobby> createLobby(string relayCode , int maxPlayers =defaultPlayerCount, string lobbyName = "defaultLobbyName",int map =0,int mode= 0)
+    public async Task<Lobby> createLobby(string relayCode,String region , int maxPlayers =defaultPlayerCount, string lobbyName = "defaultLobbyName",int map =0,int mode= 0)
     {
         try
         {
@@ -138,6 +146,7 @@ public class HighLevelNetcode : MonoBehaviour
                 {KEY_JOINCODE,new DataObject(DataObject.VisibilityOptions.Member,relayCode) },
                 {KEY_MAP,new DataObject(DataObject.VisibilityOptions.Public,map.ToString()) },
                    {KEY_MODE,new DataObject(DataObject.VisibilityOptions.Public,mode.ToString()) },
+                   {KEY_REGION,new DataObject(DataObject.VisibilityOptions.Public,region.ToString()) },
             };
 
 
@@ -153,4 +162,16 @@ public class HighLevelNetcode : MonoBehaviour
         }
     }
 
+    //Gamemodes
+    public enum gameMode
+    {
+        ffa = 0,
+    }
+
+}
+
+public class RelayData
+{
+   public Allocation alloc;
+   public string joinCode;
 }
