@@ -1,7 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Unity.Netcode;
+using Unity.Services.Lobbies;
+using Unity.Services.Lobbies.Models;
 using UnityEngine;
 
 public class BrowserUi : MonoBehaviour
@@ -10,6 +13,7 @@ public class BrowserUi : MonoBehaviour
     [SerializeField] GameObject lobbyItemPrefab;
     [SerializeField] Transform scrollContent;
     private List<GameObject> elements = new List<GameObject>();
+    [SerializeField] private List<Lobby> elementLobbies = new List<Lobby>();
     private void Start()
     {
         netcode = NetworkManager.Singleton.gameObject.GetComponent<HighLevelNetcode>();
@@ -23,11 +27,14 @@ public class BrowserUi : MonoBehaviour
            Destroy(element);
         }
         elements.Clear();
+        elementLobbies.Clear();
 
-        var lobbies = await netcode.getLobbies();
-        foreach (var lobby in lobbies)
+        List<Lobby> lobbies = await netcode.getLobbies();
+        elementLobbies = lobbies;
+        for(int i = 0 ; i < lobbies.Count() ; i++)
         {
-            var obj = Instantiate(lobbyItemPrefab , scrollContent); 
+            Lobby lobby = lobbies[i];
+            var obj = Instantiate(lobbyItemPrefab , scrollContent);
             var refs = obj.GetComponent<TextReferences>();
 
             // order = : name,map,mode,region,players
@@ -45,8 +52,22 @@ public class BrowserUi : MonoBehaviour
             playerStr += "/";
             playerStr += lobby.MaxPlayers.ToString();
             refs.text[4].text = playerStr;
-            
+
+
+
             elements.Add(obj);
         }
+        
     }
+    public async void Join()
+    {
+        for(int i = 0 ; i < elements.Count ; i++)
+        {
+            if(!elements[i].GetComponent<selectableState>().isSelected)
+                continue;
+           await netcode.JoinGame(elementLobbies[i]);
+            return;
+        }
+    }
+
 }

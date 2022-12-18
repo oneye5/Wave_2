@@ -14,19 +14,21 @@ using UnityEngine;
 
 public class HighLevelNetcode : MonoBehaviour
 {
-    public const string KEY_JOINCODE = "RELAYKEY";
+    public const string KEY_JOINCODE = "JOINCODE";
     public const string KEY_MAP = "MAP";
     public const string KEY_MODE = "MODE";
     public const string KEY_REGION = "REGION";
+
+    public const string DEFAULT_LOBBY_NAME = "DefaultName";
 
     const int defaultPlayerCount = 8;
     public List<GameObject> mapPrefabs;
 
     bool inGame = false;
-    async void Start()
+     void Start()
     {
-        await UnityServices.InitializeAsync();
-        await AuthenticationService.Instance.SignInAnonymouslyAsync();
+         UnityServices.InitializeAsync();
+         AuthenticationService.Instance.SignInAnonymouslyAsync();
     }
     //high level stuffs
     public async void QuickPlay() //joins a lobby, if none exist, create one
@@ -35,7 +37,7 @@ public class HighLevelNetcode : MonoBehaviour
         var lobbies = await getLobbies();
         if(lobbies.Count != 0)
         {
-            await joinLobby(lobbies[0]);
+            await JoinGame(lobbies[0]);
             return;
         }
 
@@ -43,14 +45,22 @@ public class HighLevelNetcode : MonoBehaviour
     }
     public async Task<bool> JoinGame(Lobby l)
     {
-        var joinCode = l.Data[KEY_JOINCODE].Value;
+        if(l == null)
+        {
+            Debug.LogError("HighLevel_Netcode.JoinGame(Lobby) : Lobby was null!");
+            return false;
+        }
+
         l = await joinLobby(l);
+
+        var joinCode = l.Data[KEY_JOINCODE].Value;
+        Debug.Log("joining " + joinCode);
         await joinRelay(joinCode);
         NetworkManager.Singleton.StartClient();
 
         return true;
     }
-    public async void CreateGame(int maxPlayers , string lobbyname , int map , int mode)
+    public async Task CreateGame(int maxPlayers , string lobbyname , int map , int mode)
     {
         var relayData = await createRelay();
         await createLobby(relayData.joinCode,relayData.alloc.Region);
@@ -58,16 +68,14 @@ public class HighLevelNetcode : MonoBehaviour
     }
     public async void QuickCreateGame()
     {
-        var relayData = await createRelay();
-        await createLobby(relayData.joinCode,relayData.alloc.Region);
-        NetworkManager.Singleton.StartHost();
+     await  CreateGame(8 , DEFAULT_LOBBY_NAME , 0 , 0);
     }
     public async Task<List<Lobby>> getLobbies()
     {
         try
-        {
+        {  
             var Responce = await Lobbies.Instance.QueryLobbiesAsync();
-
+           // Debug.Log( Responce.Results[0].Data[KEY_JOINCODE].Value);
             return Responce.Results;
         }
         catch(LobbyServiceException x)
@@ -97,6 +105,8 @@ public class HighLevelNetcode : MonoBehaviour
             RelayData outData = new RelayData();
             outData.joinCode = joinCode;
             outData.alloc = allocation;
+
+            Debug.Log("relay created " + outData.joinCode + " " + outData.alloc);
             return outData;
         }
         catch(RelayServiceException e)
