@@ -23,14 +23,19 @@ public class HighLevelNetcode : MonoBehaviour
 
     const int defaultPlayerCount = 8;
     public List<GameObject> mapPrefabs;
-
-    bool inGame = false;
+    private GameObject currentMap;
+    [SerializeField] Transform mapParent;
+    [SerializeField] GameObject mainMenuUI;
+    Lobby currentLobby;
+    [SerializeField] float heartbeatDelay;
+    float timeTillHeartbeat;
      void Start()
     {
          UnityServices.InitializeAsync();
          AuthenticationService.Instance.SignInAnonymouslyAsync();
     }
     //high level stuffs
+    #region high level methods
     public async void QuickPlay() //joins a lobby, if none exist, create one
     {
         //add more advanced way of picking a lobby in the future
@@ -58,13 +63,16 @@ public class HighLevelNetcode : MonoBehaviour
         await joinRelay(joinCode);
         NetworkManager.Singleton.StartClient();
 
+        initGame(l);
         return true;
     }
     public async Task CreateGame(int maxPlayers , string lobbyname , int map , int mode)
     {
         var relayData = await createRelay();
-        await createLobby(relayData.joinCode,relayData.alloc.Region);
+        var l =   await createLobby(relayData.joinCode,relayData.alloc.Region);
         NetworkManager.Singleton.StartHost();
+
+        initGame(l);
     }
     public async void QuickCreateGame()
     {
@@ -84,9 +92,24 @@ public class HighLevelNetcode : MonoBehaviour
             return null;
         }
     }
-
-
-    // relay system
+    private async Task heartBeat()
+    {
+        if(currentLobby == null)
+            return;
+        if(timeTillHeartbeat > 0)
+        {
+            timeTillHeartbeat -= Time.deltaTime;
+            return;
+        }
+        else
+        {
+            timeTillHeartbeat = heartbeatDelay;
+        }
+        LobbyService.Instance.SendHeartbeatPingAsync(currentLobby.Id);
+        Debug.Log("heartbeat");
+    }
+    #endregion
+    #region relay methods
     public async Task<RelayData> createRelay() //returns the join code
     {
         try
@@ -129,7 +152,8 @@ public class HighLevelNetcode : MonoBehaviour
             Debug.Log(e);
         }
     }
-    //lobby system
+    #endregion
+    #region lobby methods
     public async Task<Lobby> joinLobby(Lobby l)
     {
         try
@@ -172,12 +196,82 @@ public class HighLevelNetcode : MonoBehaviour
         }
     }
 
-    //Gamemodes
+    public async void leaveLobby(string lobbyID , string playerID)
+    {
+        try
+        {
+           await LobbyService.Instance.RemovePlayerAsync(lobbyID , playerID);
+        }
+        catch(LobbyServiceException e)
+        {
+            Debug.LogWarning(e);
+        }
+    }
+    public async void leaveLobby(Lobby l , string playerID)
+    {
+        try
+        {
+            await LobbyService.Instance.RemovePlayerAsync(l.Id , playerID);
+        }
+        catch(LobbyServiceException e)
+        {
+            Debug.LogWarning(e);
+        }
+    }
+    public async void leaveLobby(Lobby l , Player p)
+    {
+        try
+        {
+            await LobbyService.Instance.RemovePlayerAsync(l.Id , p.Id);
+        }
+        catch(LobbyServiceException e)
+        {
+            Debug.LogWarning(e);
+        }
+    }
+
+    public void selfLeaveGame()
+    {
+         leaveLobby(currentLobby.Id , AuthenticationService.Instance.PlayerId);
+        NetworkManager.Singleton.Shutdown();
+        Destroy(currentMap);
+        currentMap = null;
+        currentLobby = null;
+       mainMenuUI.SetActive(true);
+    }    
+    #endregion
     public enum gameMode
     {
         ffa = 0,
     }
 
+    private void initGame(Lobby l) //spawns map
+    {
+        Debug.Log("shutting down connection");
+        int mapIndex = int.Parse(l.Data[KEY_MAP].Value);
+
+        if(currentMap != null)
+            Destroy(currentMap);
+
+        currentMap = Instantiate(mapPrefabs[mapIndex] , mapParent);
+        mainMenuUI.SetActive(false);
+        currentLobby = l;
+        
+    }
+
+
+   
+    private void Update()
+    {
+       heartBeat();
+    }
+    private void OnApplicationQuit()
+    {
+        if(currentLobby == null)
+            return;
+
+        selfLeaveGame();
+    }
 }
 
 public class RelayData
