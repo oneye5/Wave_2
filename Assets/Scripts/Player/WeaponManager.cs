@@ -1,37 +1,38 @@
-using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
+using Unity.Netcode;
 using UnityEngine;
 
-public class WeaponManager : MonoBehaviour
+public class WeaponManager : NetworkBehaviour
 {
-    BulletVisuals visuals;
+    [HideInInspector] public BulletVisuals visuals;
+    [SerializeField] LayerMask targetMask;
+    [SerializeField] PlayerUiManager uiManager;
     private void Start()
     {
-      visuals = GetComponentInChildren<BulletVisuals>();
+        visuals = GetComponentInChildren<BulletVisuals>();
         visuals.ChangeWeapon(0);
     }
-    List<Weapon> weapons = new List<Weapon>();
+    public List<Weapon> weapons = new List<Weapon>();
     int ActiveWeapon; // refers to index of weapons
     public void AddWeapon(WeaponTypes type)
     {
         Weapon w = new Weapon(type);
         weapons.Add(w);
     }
-    public void Tick(PlayerInput input,Transform head) //handels reloading & firing
+    public void Tick(PlayerInput input , Transform head) //handels reloading & firing
     {
-       //tick all weapons that are not active
-       for(int i = 0; i < weapons.Count ; i++)
+        //tick all weapons that are not active
+        for(int i = 0 ; i < weapons.Count ; i++)
         {
             if(i == ActiveWeapon)
                 continue;
 
 
-            weapons[i].Tick(Time.deltaTime ,reload: false ,shoot: false , head); //cannot be reloaded or shot due to the weapon not being active
-                                                                                 //so those args are hard coded to be false
+            weapons[i].Tick(Time.deltaTime , reload: false , shoot: false , head); //cannot be reloaded or shot due to the weapon not being active
+                                                                                   //so those args are hard coded to be false
         }
 
-       var bullets = weapons[ActiveWeapon].Tick(Time.deltaTime , input.reload , input.fire , head);
+        var bullets = weapons[ActiveWeapon].Tick(Time.deltaTime , input.reload , input.fire , head);
         if(bullets == null)
             return;
 
@@ -50,22 +51,38 @@ public class WeaponManager : MonoBehaviour
         }
     }
 
-    
 
-    private void handelHitscan(Bullet b,Transform head)
+
+    private void handelHitscan(Bullet b , Transform head)
     {
         RaycastHit hit;
-        if(Physics.Raycast(head.position ,b.Forward, out hit , weapons[ActiveWeapon].weaponAttributes.HitscanRange)) //if hit
+
+        if(Physics.Raycast(head.position , b.Forward , out hit , weapons[ActiveWeapon].weaponAttributes.HitscanRange , targetMask)) //if hit
         {
-            //handle damage
-         //   DamageHandel d;
-        //  if(hit.transform.gameObject.TryGetComponent<DamageHandel>(out d)) // if damageable
-      //    {
-     //       d.Hit(b);
-        //  }
+            Debug.Log("object hit " + hit.transform.gameObject.name);
+
+            if(hit.transform.gameObject.tag == "HeadHitbox")
+            {
+                float damage = b.ParentWeapon.weaponAttributes.Damage * b.ParentWeapon.weaponAttributes.HeadshotMulti;
+                string thisId = NetworkObjectId.ToString();
+                string otherId = hit.transform.gameObject.GetComponentInParent<NetworkObject>().NetworkObjectId.ToString();
+
+                ServerGameManagerRef.Instance.playerHit_ServerRpc(damage , thisId , otherId);
+                uiManager.showHitMarker(true);
+            }
+            if(hit.transform.gameObject.tag == "BodyHitbox")
+            {
+
+                float damage = b.ParentWeapon.weaponAttributes.Damage;
+                string thisId = NetworkObjectId.ToString();
+                string otherId = hit.transform.gameObject.GetComponentInParent<NetworkObject>().NetworkObjectId.ToString();
+
+                ServerGameManagerRef.Instance.playerHit_ServerRpc(damage , thisId , otherId);
+                uiManager.showHitMarker(false);
+            }
 
 
-            b.hit = true; 
+            b.hit = true;
             b.Pos = hit.point;
         }
         else
@@ -76,7 +93,7 @@ public class WeaponManager : MonoBehaviour
         }
         visuals.createEffects(b);
     }
-    private void handelProjectile(Bullet b, Transform head)
+    private void handelProjectile(Bullet b , Transform head)
     {
 
     }

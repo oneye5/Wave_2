@@ -34,5 +34,7 @@ public class HeadMovement : MonoBehaviour
         }
 
         transform.localRotation = Quaternion.Euler(rot);
+
+        
     }
 }

@@ -9,16 +9,11 @@ using UnityEngine;
 
 public class BrowserUi : MonoBehaviour
 {
-    HighLevelNetcode netcode;
+    [SerializeField] HighLevelNetcode netcode;
     [SerializeField] GameObject lobbyItemPrefab;
     [SerializeField] Transform scrollContent;
     private List<GameObject> elements = new List<GameObject>();
     [SerializeField] private List<Lobby> elementLobbies = new List<Lobby>();
-    private void Start()
-    {
-        netcode = NetworkManager.Singleton.gameObject.GetComponent<HighLevelNetcode>();
-    }
-
     public async void Refresh()
     {
         //delete all current elements

@@ -15,6 +15,8 @@ public class BulletVisuals : NetworkBehaviour
     [SerializeField] private List<GameObject> MuzzelFlash;
     [SerializeField] private List<Vector3> MuzzelFlashOffset;
     [SerializeField] private List<GameObject> ModelPrefabs;
+
+
     public GameObject ModelParrent;
 
     private GameObject CurrentWeapon;
@@ -34,16 +36,20 @@ public class BulletVisuals : NetworkBehaviour
         Quaternion rot;
 
         //spawn effects over network
-
+        Vector3 gunPos = CurrentWeapon.GetComponentInChildren<TransformGetter>().get().position;
+        Vector3 flashOffset =  MuzzelFlashOffset[b.ParentWeapon.weaponAttributes.FlashIndex] ;
+        flashOffset = new Vector3(flashOffset.x * transform.forward.x , flashOffset.y * transform.forward.y , flashOffset.z * transform.forward.z);
+        //fix later
+        flashOffset = Vector3.zero;
 
         obj = MuzzelFlash[b.ParentWeapon.weaponAttributes.FlashIndex];
-        pos = MuzzelFlashOffset[b.ParentWeapon.weaponAttributes.FlashIndex] + transform.position;
+        pos = flashOffset + gunPos;
         rot = b.Rot; 
         sObj = NetworkSerializer.serialize_obj(obj); //convert into strings for use over network
         sPos = NetworkSerializer.serialize_vector3(pos);
         sRot = NetworkSerializer.serialize_quaternion(rot);
-        sender = this.NetworkObjectId.ToString();
-        spawner.spawnObject_ServerRpc(sObj , sPos , sRot , sender); //spawn 
+        sender = NetworkManager.Singleton.LocalClientId.ToString();
+        spawner.localSpawnObject(sObj , sPos , sRot , sender); //spawn 
 
 
         if(b.hit)
@@ -54,19 +60,17 @@ public class BulletVisuals : NetworkBehaviour
             sObj = NetworkSerializer.serialize_obj(obj);
             sPos = NetworkSerializer.serialize_vector3(pos);
             sRot = NetworkSerializer.serialize_quaternion(rot);
-            sender = this.NetworkObjectId.ToString();
-            spawner.spawnObject_ServerRpc(sObj , sPos , sRot , sender);
+            spawner.localSpawnObject(sObj , sPos , sRot , sender);
         }
 
 
         obj = TrailEffects[b.ParentWeapon.weaponAttributes.TrailIndex];
-        pos = this.transform.position;
+        pos = flashOffset + gunPos;
         rot = b.Rot; 
         sObj = NetworkSerializer.serialize_obj(obj);
         sPos = NetworkSerializer.serialize_vector3(pos);
         sRot = NetworkSerializer.serialize_quaternion(rot);
-        sender = this.NetworkObjectId.ToString();
-        spawner.spawnObject_ServerRpc(sObj , sPos , sRot , sender);
+        spawner.localSpawnObject(sObj , sPos , sRot , sender);
 
     }
 

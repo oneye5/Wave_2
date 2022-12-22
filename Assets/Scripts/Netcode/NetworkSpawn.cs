@@ -13,32 +13,57 @@ public class NetworkSpawn : NetworkBehaviour
         NetworkSerializer.spawner = this;
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void spawnObject_ServerRpc(
-        string SobjNetworkIndex ,
-        string Spos ,
-        string Srot ,
-        string SobjParentNetworkIndex = "-1",
-        string SclientId = "-1") //most types are not allowed so strings are what i use
-    {//                     the NetworkSerializer class handels all the string conversions
+    [ServerRpc(RequireOwnership = false)] //most types are not allowed so strings are what i use
+    public void networkSpawnObject_ServerRpc( string SobjNetworkIndex , string Spos ,    string Srot , string SclientId = "-1") 
+    {
        var obj = NetworkSerializer.deSerialize_objIndex(SobjNetworkIndex);
         var pos = NetworkSerializer.deSerialize_vector3(Spos);
         var rot = NetworkSerializer.deSerialize_quaternion(Srot);
 
-        //find the parent
-        GameObject parent = null;
-        if(SobjParentNetworkIndex != "-1")
-        {
-         //   parent = NetworkSerializer.deSerialize_objIndex(SobjParentNetworkIndex);
-           
-        }
-
-
          var x = Instantiate(obj, pos, rot);
-        //x.GetComponent<NetworkObject>().SpawnWithOwnership(ulong.Parse(SclientId));
         x.GetComponent<NetworkObject>().Spawn();
     }
 
+    #region local spawning
+
+
+    [ClientRpc]
+    private void localSpawnObject_ClientRpc(string SobjNetworkIndex , string Spos , string Srot , string SclientId)
+    {
+        Debug.Log(SclientId + " sender vs sigleton.id " + NetworkManager.Singleton.LocalClientId);
+      if(SclientId == NetworkManager.Singleton.LocalClientId.ToString()) //if is sender, return. object has already been spawned by itself
+          return;
+
+        var obj = NetworkSerializer.deSerialize_objIndex(SobjNetworkIndex);
+        var pos = NetworkSerializer.deSerialize_vector3(Spos);
+        var rot = NetworkSerializer.deSerialize_quaternion(Srot);
+
+        var x = Instantiate(obj , pos , rot);
+    }
+
+
+    [ServerRpc(RequireOwnership = false)]
+    private void localSpawnObject_ServerRpc(string SobjNetworkIndex , string Spos , string Srot  , string SclientId)
+    {
+        localSpawnObject_ClientRpc(SobjNetworkIndex , Spos , Srot , SclientId); 
+    }
+
+
+
+    public void localSpawnObject(string SobjNetworkIndex , string Spos , string Srot , string SclientId = "-1")
+    { 
+        if(SclientId == NetworkManager.Singleton.LocalClientId.ToString()) //if sent from this client, spawn instantly
+        {
+            Debug.Log("self spawning");
+            var obj = NetworkSerializer.deSerialize_objIndex(SobjNetworkIndex);
+            var pos = NetworkSerializer.deSerialize_vector3(Spos);
+            var rot = NetworkSerializer.deSerialize_quaternion(Srot);
+
+            var x = Instantiate(obj , pos , rot);
+        }
+        localSpawnObject_ServerRpc(SobjNetworkIndex, Spos , Srot ,  SclientId); //data sent to server, server sends to every client
+    }
+    #endregion
 }
 public static class NetworkSerializer
 {

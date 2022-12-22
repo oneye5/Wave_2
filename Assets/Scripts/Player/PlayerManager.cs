@@ -12,6 +12,8 @@ public class PlayerManager : NetworkBehaviour
     Rigidbody rb; // main rb of body
     WeaponManager weaponManager;
     Camera cam;
+    HealthHandle healthHandle;
+    PlayerUiManager uiManager;
     private void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -21,8 +23,9 @@ public class PlayerManager : NetworkBehaviour
         rb = bodyMovement.gameObject.GetComponent<Rigidbody>();
         weaponManager = GetComponentInChildren<WeaponManager>();
         weaponManager.AddWeapon(WeaponTypes.Sniper);
-
+        healthHandle = GetComponentInChildren<HealthHandle>();
         cam = GetComponentInChildren<Camera>();
+        uiManager = GetComponentInChildren<PlayerUiManager>();
         if(!IsOwner)
         {
             cam.enabled = false;
@@ -30,6 +33,7 @@ public class PlayerManager : NetworkBehaviour
             var visuals = GetComponentInChildren<BulletVisuals>();
             var parent = visuals.ModelParrent;
             visuals.ModelParrent = headMovement.gameObject;
+            Destroy(uiManager.gameObject);
         }
     }
     void Update()
@@ -38,14 +42,27 @@ public class PlayerManager : NetworkBehaviour
             return;
         playerInput.Tick();
         headMovement.Tick(playerInput);
+        weaponManager.Tick(playerInput , headMovement.gameObject.transform);
         bodyMovement.Tick(playerInput ,headMovement.gameObject.transform);
-        weaponManager.Tick(playerInput,headMovement.gameObject.transform);
-
+       
+        uiManager.Tick();
     }
     private void LateUpdate()
     {
         if(!IsOwner)
             return;
         smoothHead.Tick(rb , headMovement.gameObject.transform);
+    }
+    public void ResetPlayer()
+    {
+        if(!IsOwner)
+            return;
+        smoothHead.transform.rotation = new Quaternion();
+      //  headMovement.
+
+        bodyMovement.gameObject.transform.position = new Vector3(0 , 2 , 0);
+        weaponManager.weapons.Clear();
+        weaponManager.AddWeapon(WeaponTypes.Sniper);
+        weaponManager.visuals.ChangeWeapon(0);
     }
 }

@@ -41,6 +41,10 @@ public class WeaponAttributes
     public float AreaRadius;
     public float AreaImpulse;
 
+    //recoil
+
+    
+
     public WeaponAttributes(WeaponTypes type)
     {
         switch(type)

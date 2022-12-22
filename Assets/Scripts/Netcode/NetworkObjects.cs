@@ -10,6 +10,7 @@ public class NetworkObjects : MonoBehaviour
     {
         foreach (var obj in objects)
         {
+            if(obj.TryGetComponent<NetworkObject>(out var x))
             NetworkManager.Singleton.AddNetworkPrefab(obj);
         }
     }

@@ -12,8 +12,9 @@ using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
 
-public class HighLevelNetcode : MonoBehaviour
+public class HighLevelNetcode : NetworkBehaviour
 {
+    #region vars
     public const string KEY_JOINCODE = "JOINCODE";
     public const string KEY_MAP = "MAP";
     public const string KEY_MODE = "MODE";
@@ -24,17 +25,27 @@ public class HighLevelNetcode : MonoBehaviour
     const int defaultPlayerCount = 8;
     public List<GameObject> mapPrefabs;
     private GameObject currentMap;
+
+    private ServerGameManager gameManager;
+
     [SerializeField] Transform mapParent;
     [SerializeField] GameObject mainMenuUI;
+    
     Lobby currentLobby;
     [SerializeField] float heartbeatDelay;
     float timeTillHeartbeat;
-     void Start()
+    #endregion
+    void Start()
     {
+        NetcodeRef.HighLevelNetcode = this;
          UnityServices.InitializeAsync();
          AuthenticationService.Instance.SignInAnonymouslyAsync();
+        gameManager = GetComponent<ServerGameManager>();
+        timeTillHeartbeat = heartbeatDelay;
     }
-    //high level stuffs
+    //game methods
+    
+    //high level stuffs, to do with setup
     #region high level methods
     public async void QuickPlay() //joins a lobby, if none exist, create one
     {
@@ -94,7 +105,7 @@ public class HighLevelNetcode : MonoBehaviour
     }
     private async Task heartBeat()
     {
-        if(currentLobby == null)
+        if(currentLobby == null || IsClient)
             return;
         if(timeTillHeartbeat > 0)
         {
@@ -105,7 +116,7 @@ public class HighLevelNetcode : MonoBehaviour
         {
             timeTillHeartbeat = heartbeatDelay;
         }
-        LobbyService.Instance.SendHeartbeatPingAsync(currentLobby.Id);
+        await LobbyService.Instance.SendHeartbeatPingAsync(currentLobby.Id);
         Debug.Log("heartbeat");
     }
     #endregion
@@ -233,11 +244,13 @@ public class HighLevelNetcode : MonoBehaviour
     public void selfLeaveGame()
     {
          leaveLobby(currentLobby.Id , AuthenticationService.Instance.PlayerId);
+        if(NetworkManager.Singleton != null)
         NetworkManager.Singleton.Shutdown();
         Destroy(currentMap);
         currentMap = null;
         currentLobby = null;
        mainMenuUI.SetActive(true);
+        Debug.Log("game left");
     }    
     #endregion
     public enum gameMode
@@ -247,7 +260,7 @@ public class HighLevelNetcode : MonoBehaviour
 
     private void initGame(Lobby l) //spawns map
     {
-        Debug.Log("shutting down connection");
+        Debug.Log("INITIALIZING");
         int mapIndex = int.Parse(l.Data[KEY_MAP].Value);
 
         if(currentMap != null)
@@ -257,6 +270,7 @@ public class HighLevelNetcode : MonoBehaviour
         mainMenuUI.SetActive(false);
         currentLobby = l;
         
+
     }
 
 
@@ -267,6 +281,7 @@ public class HighLevelNetcode : MonoBehaviour
     }
     private void OnApplicationQuit()
     {
+        Debug.Log("exiting application");
         if(currentLobby == null)
             return;
 
@@ -278,4 +293,8 @@ public class RelayData
 {
    public Allocation alloc;
    public string joinCode;
+}
+public static class NetcodeRef
+{
+  public  static HighLevelNetcode HighLevelNetcode;
 }
