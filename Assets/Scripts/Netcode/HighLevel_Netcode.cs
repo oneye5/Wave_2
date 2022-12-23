@@ -84,6 +84,7 @@ public class HighLevelNetcode : NetworkBehaviour
         NetworkManager.Singleton.StartHost();
 
         initGame(l);
+        ServerGameManagerRef.Instance.ServerStart();
     }
     public async void QuickCreateGame()
     {

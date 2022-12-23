@@ -1,5 +1,8 @@
 using Gravitons.UI.Modal;
+using System;
+using System.Collections.Generic;
 using Unity.Netcode;
+using Unity.Services.Authentication;
 using Unity.Services.Lobbies.Models;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -50,13 +53,41 @@ public class ServerGameManager : NetworkBehaviour
         player.GetComponent<PlayerManager>().ResetPlayer();
 
     }
-
     public void hostLeave()
     {
         HighLevelNetcodeRef.HighLevelNetcode.selfLeaveGame();
         ModalManager.Show("HOST HAS LEFT" , "GAME ENDED" , new[] { new ModalButton() { Text = "CLOSE" } });
     }
-    
+
+    //server management vars
+    public  GameStatistics gameStats = null;
+    public void ServerStart()
+    {
+        gameStats = new GameStatistics();
+        gameStats.Created = DateTime.Now;
+        PlayerStatistics hostStats = new PlayerStatistics();
+        //hostStats.=
+        gameStats.playerStats.Add(AuthenticationService.Instance.PlayerId,)
+    }
+}
+public class GameStatistics
+{
+   public DateTime Created;
+   public Dictionary<string,PlayerStatistics> playerStats; //key is authservice.playerID
+    public string HostID;
+}
+public class PlayerStatistics
+{
+  public  float damageDone;
+    public float damageTaken;
+    public int kills;
+    public int deaths;
+    public float ping;
+
+    public ulong playerObjectID;
+    string lobbyPlayerID;
+
+    bool isHost;
 }
 public static class ServerGameManagerRef
 {
