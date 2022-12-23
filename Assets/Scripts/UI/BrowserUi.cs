@@ -1,3 +1,4 @@
+using Gravitons.UI.Modal;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,7 +6,9 @@ using System.Threading.Tasks;
 using Unity.Netcode;
 using Unity.Services.Lobbies;
 using Unity.Services.Lobbies.Models;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class BrowserUi : MonoBehaviour
 {
@@ -14,6 +17,7 @@ public class BrowserUi : MonoBehaviour
     [SerializeField] Transform scrollContent;
     private List<GameObject> elements = new List<GameObject>();
     [SerializeField] private List<Lobby> elementLobbies = new List<Lobby>();
+
     public async void Refresh()
     {
         //delete all current elements

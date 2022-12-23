@@ -31,13 +31,13 @@ public class HighLevelNetcode : NetworkBehaviour
     [SerializeField] Transform mapParent;
     [SerializeField] GameObject mainMenuUI;
     
-    Lobby currentLobby;
+    public Lobby currentLobby;
     [SerializeField] float heartbeatDelay;
     float timeTillHeartbeat;
     #endregion
     void Start()
     {
-        NetcodeRef.HighLevelNetcode = this;
+        HighLevelNetcodeRef.HighLevelNetcode = this;
          UnityServices.InitializeAsync();
          AuthenticationService.Instance.SignInAnonymouslyAsync();
         gameManager = GetComponent<ServerGameManager>();
@@ -251,6 +251,7 @@ public class HighLevelNetcode : NetworkBehaviour
         currentLobby = null;
        mainMenuUI.SetActive(true);
         Debug.Log("game left");
+        Cursor.lockState = CursorLockMode.None;
     }    
     #endregion
     public enum gameMode
@@ -294,7 +295,7 @@ public class RelayData
    public Allocation alloc;
    public string joinCode;
 }
-public static class NetcodeRef
+public static class HighLevelNetcodeRef
 {
   public  static HighLevelNetcode HighLevelNetcode;
 }

@@ -7,10 +7,12 @@ public class WeaponManager : NetworkBehaviour
     [HideInInspector] public BulletVisuals visuals;
     [SerializeField] LayerMask targetMask;
     [SerializeField] PlayerUiManager uiManager;
+    private Camera cam;
     private void Start()
     {
         visuals = GetComponentInChildren<BulletVisuals>();
         visuals.ChangeWeapon(0);
+        cam = Camera.main;
     }
     public List<Weapon> weapons = new List<Weapon>();
     int ActiveWeapon; // refers to index of weapons
@@ -42,11 +44,11 @@ public class WeaponManager : NetworkBehaviour
         {
             if(b.ParentWeapon.weaponAttributes.Hitscan)
             {
-                handelHitscan(b , head);
+                handelHitscan(b , cam.transform);
             }
             else
             {
-                handelProjectile(b , head);
+                handelProjectile(b , cam.transform);
             }
         }
     }

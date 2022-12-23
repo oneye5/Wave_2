@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Unity.VisualScripting;
 using UnityEngine;
 using Quaternion = UnityEngine.Quaternion;
+using Random = UnityEngine.Random;
 using Vector3 = UnityEngine.Vector3;
 
 public enum WeaponTypes
@@ -42,8 +44,18 @@ public class WeaponAttributes
     public float AreaImpulse;
 
     //recoil
+   public Vector3 Recoil_camJump;
+   public float   Recoil_camJumpRecovery;
+   public float   Recoil_camShakeStr;
+   public float   Recoil_camShakeDuration;
+   public float   Recoil_camJumpTime;
 
-    
+   public Vector3 Recoil_weaponJumpRot;
+   public float   Recoil_weaponJumpRecovery;
+   public Vector3 Recoil_weaponPosJump;
+   public float   Recoil_weaponJumpTime;
+   public float   Recoil_weaponShakeStr;
+   public float   Recoil_weaponShakeDuration;
 
     public WeaponAttributes(WeaponTypes type)
     {
@@ -65,6 +77,19 @@ public class WeaponAttributes
                 HitIndex = 0;
                 HitscanRange = 100;
                 AreaDamage = false;
+
+                Recoil_camJump = new Vector3(-25 , 0 , 0);
+                Recoil_camJumpRecovery = 0.75f;
+                Recoil_camJumpTime = 0.1f;
+                Recoil_camShakeDuration = 0.25f;
+                Recoil_camShakeStr = 3;
+
+                Recoil_weaponJumpRecovery = 0.9f;
+                Recoil_weaponJumpRot = new Vector3(-25 , 0 , 0);
+                Recoil_weaponJumpTime = 0.2f;
+                Recoil_weaponPosJump = new Vector3(0 , 0 , -0.05f);
+                Recoil_weaponShakeDuration = 0.25f;
+                Recoil_weaponShakeStr = 5f;
                 break;
         }
     }

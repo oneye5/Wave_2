@@ -65,4 +65,9 @@ public class PlayerManager : NetworkBehaviour
         weaponManager.AddWeapon(WeaponTypes.Sniper);
         weaponManager.visuals.ChangeWeapon(0);
     }
+    private void OnDestroy()
+    {
+        if(IsOwner)
+        ServerGameManagerRef.Instance.hostLeave();
+    }
 }

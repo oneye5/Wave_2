@@ -1,3 +1,4 @@
+using DG.Tweening;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
@@ -18,15 +19,18 @@ public class BulletVisuals : NetworkBehaviour
 
 
     public GameObject ModelParrent;
+    private Camera cam;
 
     private GameObject CurrentWeapon;
     private NetworkSpawn spawner;
     private void Start()
     {
        spawner = FindObjectOfType<NetworkSpawn>();
+        cam = Camera.main;
     }
     public void createEffects(Bullet b)
     {
+        //spawn
         string sObj;
         string sPos;
         string sRot;
@@ -72,6 +76,15 @@ public class BulletVisuals : NetworkBehaviour
         sRot = NetworkSerializer.serialize_quaternion(rot);
         spawner.localSpawnObject(sObj , sPos , sRot , sender);
 
+
+        //RECOIL ______________
+        var attributes = b.ParentWeapon.weaponAttributes;
+        recoilClimb(cam.transform , attributes.Recoil_camJump , attributes.Recoil_camJumpTime, attributes.Recoil_camJumpRecovery);
+        recoilPunchRandom(cam.transform, attributes.Recoil_camShakeStr, attributes.Recoil_camShakeDuration);
+
+        recoilClimb(ModelParrent.transform , attributes.Recoil_weaponJumpRot , attributes.Recoil_weaponJumpTime, attributes.Recoil_weaponJumpRecovery);
+        recoilMove(ModelParrent.transform , attributes.Recoil_weaponPosJump , attributes.Recoil_weaponJumpRecovery);
+        recoilPunchRandom(ModelParrent.transform , attributes.Recoil_weaponShakeStr , attributes.Recoil_weaponShakeDuration);
     }
 
     public void ChangeWeapon(int index)
@@ -84,5 +97,23 @@ public class BulletVisuals : NetworkBehaviour
             ModelParrent.transform);
 
         CurrentWeapon.transform.localPosition = Vector3.zero;
+    }
+    public void recoilClimb(Transform t,Vector3 climb,float jumpTime,float recovery)
+    {
+        t.localRotation = Quaternion.Euler(Vector3.zero);
+        t.DOBlendableLocalRotateBy( climb , jumpTime);
+        t.DOBlendableLocalRotateBy( -climb , recovery);
+      
+    }
+    public void recoilMove(Transform t,Vector3 jump,float recovery)
+    {
+        t.localPosition += jump;
+        t.DOBlendableLocalMoveBy(-jump , recovery);
+    }
+    public void recoilPunchRandom(Transform t, float climb,float duration)
+    {
+        Vector3 random = Random.rotation.eulerAngles;
+        random = random / 360;
+        t.DOBlendablePunchRotation(random * climb , duration);
     }
 }
