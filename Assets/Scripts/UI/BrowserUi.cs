@@ -44,7 +44,7 @@ public class BrowserUi : MonoBehaviour
                     )].name;
 
             int enumIndex = int.Parse(lobby.Data[HighLevelNetcode.KEY_MODE].Value);
-            refs.text[2].text = ((HighLevelNetcode.gameMode)enumIndex).ToString();
+            refs.text[2].text = ((HighLevelNetcode.GameMode)enumIndex).ToString();
             refs.text[3].text = lobby.Data[HighLevelNetcode.KEY_REGION].Value;
 
             string playerStr = lobby.Players.Count.ToString();

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
+using Unity.Services.Authentication;
 using UnityEngine;
 
 public class PlayerManager : NetworkBehaviour
@@ -35,6 +36,14 @@ public class PlayerManager : NetworkBehaviour
             visuals.ModelParrent = headMovement.gameObject;
             Destroy(uiManager.gameObject);
         }
+        else
+        {
+            ServerGameManagerRef.Instance.PlayerJoin_ServerRpc(
+                AuthenticationService.Instance.PlayerId,
+                cam.gameObject.GetComponent<NetworkObject>().NetworkObjectId);
+
+            ServerGameManagerRef.Instance.GameStart();
+        }
     }
     void Update()
     {
@@ -58,9 +67,7 @@ public class PlayerManager : NetworkBehaviour
         if(!IsOwner)
             return;
         smoothHead.transform.rotation = new Quaternion();
-      //  headMovement.
-
-        bodyMovement.gameObject.transform.position = new Vector3(0 , 2 , 0);
+        bodyMovement.gameObject.transform.position = ServerGameManagerRef.Instance.getSpawnPosition();
         weaponManager.weapons.Clear();
         weaponManager.AddWeapon(WeaponTypes.Sniper);
         weaponManager.visuals.ChangeWeapon(0);

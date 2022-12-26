@@ -24,7 +24,7 @@ public class HighLevelNetcode : NetworkBehaviour
 
     const int defaultPlayerCount = 8;
     public List<GameObject> mapPrefabs;
-    private GameObject currentMap;
+    public GameObject currentMap;
 
     private ServerGameManager gameManager;
 
@@ -255,7 +255,7 @@ public class HighLevelNetcode : NetworkBehaviour
         Cursor.lockState = CursorLockMode.None;
     }    
     #endregion
-    public enum gameMode
+    public enum GameMode
     {
         ffa = 0,
     }
