@@ -11,6 +11,7 @@ public class HealthHandle : NetworkBehaviour
  
     private void Start()
     {
+        if(IsHost||IsServer)
         health.Value = defaultHealth;
     }
     private void Update()

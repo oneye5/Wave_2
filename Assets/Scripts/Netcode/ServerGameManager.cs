@@ -17,31 +17,37 @@ public class ServerGameManager : NetworkBehaviour
         ServerGameManagerRef.Instance = this;
     }
     [ServerRpc(RequireOwnership = false)]
-    public void playerHit_ServerRpc(float damage , string from , string to)
+    public void playerHit_ServerRpc(float damage , string PlayerObjectID_from , string PlayerObjectID_to)
     {
         //get players
-        var playerTo = GetNetworkObject(ulong.Parse(to));
-        var playerFrom = GetNetworkObject(ulong.Parse(from));
-
+        var playerTo = GetNetworkObject(ulong.Parse(PlayerObjectID_to));
+        var playerFrom = GetNetworkObject(ulong.Parse(PlayerObjectID_from));
+      //  var playerToAuth = playerTo.GetComponent<PlayerManager>().AuthID.Value;
         var healthComp = playerTo.GetComponentInChildren<HealthHandle>();
+      //  var playerFromAuth = playerFrom.GetComponent<PlayerManager>().AuthID.Value;
         healthComp.health.Value -= damage;
 
         if(healthComp.health.Value < 0)
         {
             healthComp.health.Value = healthComp.defaultHealth;
-            playerKilled_ClientRpc(to);
+            playerKilled_ClientRpc(PlayerObjectID_to);
+        //    gameStats.playerStats[playerFromAuth].kills++;
+          //  gameStats.playerStats[playerToAuth].deaths++;
         }
 
-        playerHit_ClientRpc(damage , from , to);
+      //  gameStats.playerStats[playerToAuth].damageTaken += damage;
+       // gameStats.playerStats[playerFromAuth].damageDone += damage;
+        playerHit_ClientRpc(damage , PlayerObjectID_from , PlayerObjectID_to);
     }
     [ClientRpc]
-    public void playerHit_ClientRpc(float damage , string from , string to)
+    public void playerHit_ClientRpc(float damage , string PlayerObjectID_from , string PlayerObjectID_to)
     {
-        var playerTo = GetNetworkObject(ulong.Parse(to));
-        var playerFrom = GetNetworkObject(ulong.Parse(from));
+        var playerTo = GetNetworkObject(ulong.Parse(PlayerObjectID_to));
+      
 
         if(!playerTo.IsOwner)
             return;
+     var playerFrom = GetNetworkObject(ulong.Parse(PlayerObjectID_from));
 
         var visuals = playerTo.GetComponentInChildren<BulletVisuals>();
         visuals.recoilPunchRandom(playerTo.GetComponentInChildren<Camera>().transform , damage / 10 , 0.25f);

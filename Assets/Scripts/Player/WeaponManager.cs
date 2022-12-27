@@ -8,9 +8,12 @@ public class WeaponManager : NetworkBehaviour
     [SerializeField] LayerMask targetMask;
     [SerializeField] PlayerUiManager uiManager;
     private Camera cam;
-    private void Start()
+    private void Awake()
     {
         visuals = GetComponentInChildren<BulletVisuals>();
+    }
+    private void Start()
+    {
         visuals.ChangeWeapon(0);
         cam = Camera.main;
     }

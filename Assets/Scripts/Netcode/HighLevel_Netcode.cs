@@ -104,10 +104,11 @@ public class HighLevelNetcode : NetworkBehaviour
             return null;
         }
     }
-    private async Task heartBeat()
+    private async void heartBeat()
     {
-        if(currentLobby == null || IsClient)
+        if(currentLobby == null || !(IsHost||IsServer))
             return;
+
         if(timeTillHeartbeat > 0)
         {
             timeTillHeartbeat -= Time.deltaTime;
@@ -117,8 +118,7 @@ public class HighLevelNetcode : NetworkBehaviour
         {
             timeTillHeartbeat = heartbeatDelay;
         }
-        await LobbyService.Instance.SendHeartbeatPingAsync(currentLobby.Id);
-        Debug.Log("heartbeat");
+        await LobbyService.Instance.SendHeartbeatPingAsync(currentLobby.Id).ConfigureAwait(false);
     }
     #endregion
     #region relay methods
@@ -244,6 +244,7 @@ public class HighLevelNetcode : NetworkBehaviour
 
     public void selfLeaveGame()
     {
+        Debug.Log("leaving game");
          leaveLobby(currentLobby.Id , AuthenticationService.Instance.PlayerId);
         if(NetworkManager.Singleton != null)
         NetworkManager.Singleton.Shutdown();
