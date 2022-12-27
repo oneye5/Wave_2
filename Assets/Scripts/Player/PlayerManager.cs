@@ -17,7 +17,7 @@ public class PlayerManager : NetworkBehaviour
    // public NetworkVariable<string> AuthID = new NetworkVariable<string>("" , NetworkVariableReadPermission.Everyone , NetworkVariableWritePermission.Owner);
     private void Start()
     {
-     //   if(IsOwner)
+      //  if(IsOwner)
       //      AuthID.Value = AuthenticationService.Instance.PlayerId;
         Cursor.lockState = CursorLockMode.Locked;
         headMovement = GetComponentInChildren<HeadMovement>();

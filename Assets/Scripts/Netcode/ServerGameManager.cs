@@ -22,22 +22,23 @@ public class ServerGameManager : NetworkBehaviour
         //get players
         var playerTo = GetNetworkObject(ulong.Parse(PlayerObjectID_to));
         var playerFrom = GetNetworkObject(ulong.Parse(PlayerObjectID_from));
-      //  var playerToAuth = playerTo.GetComponent<PlayerManager>().AuthID.Value;
+        var playerToAuth = gameStats.getAuthKeyFromObjectID(PlayerObjectID_to);
         var healthComp = playerTo.GetComponentInChildren<HealthHandle>();
-      //  var playerFromAuth = playerFrom.GetComponent<PlayerManager>().AuthID.Value;
+        var playerFromAuth = gameStats.getAuthKeyFromObjectID(PlayerObjectID_from);
         healthComp.health.Value -= damage;
 
         if(healthComp.health.Value < 0)
         {
             healthComp.health.Value = healthComp.defaultHealth;
             playerKilled_ClientRpc(PlayerObjectID_to);
-        //    gameStats.playerStats[playerFromAuth].kills++;
-          //  gameStats.playerStats[playerToAuth].deaths++;
+           gameStats.playerStats[playerFromAuth].kills++;
+            gameStats.playerStats[playerToAuth].deaths++;
         }
 
-      //  gameStats.playerStats[playerToAuth].damageTaken += damage;
-       // gameStats.playerStats[playerFromAuth].damageDone += damage;
+        gameStats.playerStats[playerToAuth].damageTaken += damage;
+        gameStats.playerStats[playerFromAuth].damageDone += damage;
         playerHit_ClientRpc(damage , PlayerObjectID_from , PlayerObjectID_to);
+
     }
     [ClientRpc]
     public void playerHit_ClientRpc(float damage , string PlayerObjectID_from , string PlayerObjectID_to)
@@ -73,7 +74,9 @@ public class ServerGameManager : NetworkBehaviour
         PlayerStatistics playerStats = new PlayerStatistics();
         playerStats.isHost = false;
         playerStats.playerObjectID = playerObjectID;
-        gameStats.playerStats.Add(AuthenticationService.Instance.PlayerId , playerStats);
+        if(!gameStats.playerStats.ContainsKey(lobbyID))
+        gameStats.playerStats.Add(lobbyID , playerStats);
+        Debug.Log("Player Joined " + lobbyID);
     }
 
     //server management vars
@@ -182,11 +185,12 @@ public class ServerGameManager : NetworkBehaviour
         float z = UnityEngine.Random.Range(-vol.scale.z / 2 , vol.scale.z / 2); ;
 
         Vector3 pos = vol.pos + new Vector3(x,y,z);
+        Debug.Log("spawnpoint found");
         return pos;
     }
     public void AssignTeam()
     {
-
+        Debug.Log("assigning team");
     }
 }
 public class GameStatistics
@@ -194,6 +198,18 @@ public class GameStatistics
     public DateTime Created;
     public Dictionary<string , PlayerStatistics> playerStats = new Dictionary<string, PlayerStatistics>(); //key is authservice.playerID
     public string HostID;
+    public string getAuthKeyFromObjectID(string objID)
+    {
+        foreach(var item in playerStats)
+        {
+            if(item.Value.playerObjectID.ToString() == objID)
+            {
+                return item.Key;
+            }
+        }
+        Debug.LogWarning(objID + " Item not found, returning null (getAuthKeyFromObjectID)");
+        return null;
+    }
 }
 public class PlayerStatistics
 {
