@@ -2,11 +2,8 @@ using Gravitons.UI.Modal;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using Unity.Mathematics;
 using Unity.Netcode;
 using Unity.Services.Authentication;
-using Unity.Services.Lobbies.Models;
 using UnityEngine;
 using static HighLevelNetcode;
 
@@ -31,8 +28,9 @@ public class ServerGameManager : NetworkBehaviour
         {
             healthComp.health.Value = healthComp.defaultHealth;
             playerKilled_ClientRpc(PlayerObjectID_to);
-           gameStats.playerStats[playerFromAuth].kills++;
+            gameStats.playerStats[playerFromAuth].kills++;
             gameStats.playerStats[playerToAuth].deaths++;
+            playerKIlled_ServerRpc(playerFromAuth , playerToAuth);
         }
 
         gameStats.playerStats[playerToAuth].damageTaken += damage;
@@ -44,15 +42,16 @@ public class ServerGameManager : NetworkBehaviour
     public void playerHit_ClientRpc(float damage , string PlayerObjectID_from , string PlayerObjectID_to)
     {
         var playerTo = GetNetworkObject(ulong.Parse(PlayerObjectID_to));
-      
+
 
         if(!playerTo.IsOwner)
             return;
-     var playerFrom = GetNetworkObject(ulong.Parse(PlayerObjectID_from));
+        var playerFrom = GetNetworkObject(ulong.Parse(PlayerObjectID_from));
 
         var visuals = playerTo.GetComponentInChildren<BulletVisuals>();
         visuals.recoilPunchRandom(playerTo.GetComponentInChildren<Camera>().transform , damage / 10 , 0.25f);
     }
+
     [ClientRpc]
     public void playerKilled_ClientRpc(string id)
     {
@@ -63,19 +62,26 @@ public class ServerGameManager : NetworkBehaviour
         player.GetComponent<PlayerManager>().ResetPlayer();
 
     }
+    [ServerRpc]
+    public void playerKIlled_ServerRpc(string authFrom , string AuthTo)
+    {
+        gameStats.playerStats[authFrom].kills++;
+        gameStats.playerStats[AuthTo].deaths++;
+    }
     public void hostLeave()
     {
-        HighLevelNetcodeRef.HighLevelNetcode.selfLeaveGame();
+        HighLevelNetcodeRef.Instance.selfLeaveGame();
         ModalManager.Show("HOST HAS LEFT" , "GAME ENDED" , new[] { new ModalButton() { Text = "CLOSE" } });
     }
-    [ServerRpc(RequireOwnership = false)] 
-    public void PlayerJoin_ServerRpc(string lobbyID,ulong playerObjectID)
+
+    [ServerRpc(RequireOwnership = false)]
+    public void PlayerJoin_ServerRpc(string lobbyID , ulong playerObjectID)
     {
         PlayerStatistics playerStats = new PlayerStatistics();
         playerStats.isHost = false;
         playerStats.playerObjectID = playerObjectID;
         if(!gameStats.playerStats.ContainsKey(lobbyID))
-        gameStats.playerStats.Add(lobbyID , playerStats);
+            gameStats.playerStats.Add(lobbyID , playerStats);
         Debug.Log("Player Joined " + lobbyID);
     }
 
@@ -96,11 +102,11 @@ public class ServerGameManager : NetworkBehaviour
 
     //ping pong system
     [SerializeField] float pingRate;
-    float timeTillPing=1;
+    float timeTillPing = 1;
     ulong? PlayerObjectID = null;
     void pingPong()
     {
-        if(!(IsHost||IsServer) || HighLevelNetcodeRef.HighLevelNetcode.currentLobby == null)
+        if(!(IsHost || IsServer) || HighLevelNetcodeRef.Instance.currentLobby == null)
             return;
         timeTillPing -= Time.fixedDeltaTime;
         if(timeTillPing <= 0)
@@ -110,6 +116,7 @@ public class ServerGameManager : NetworkBehaviour
             pingClientRpc(JsonConvert.SerializeObject(gameStats));
         }
     }
+
     [ClientRpc]
     private void pingClientRpc(string gameStatistic_Json)
     {
@@ -118,12 +125,13 @@ public class ServerGameManager : NetworkBehaviour
         if(PlayerObjectID == null)
             PlayerObjectID = Camera.main.GetComponentInParent<NetworkObject>().NetworkObjectId;
 
-        pongServerRpc(DateTime.Now.Ticks,AuthenticationService.Instance.PlayerId,PlayerObjectID.ToString());
+        pongServerRpc(DateTime.Now.Ticks , AuthenticationService.Instance.PlayerId , PlayerObjectID.ToString());
     }
+
     [ServerRpc(RequireOwnership = false)]
-    void pongServerRpc(long sentTime , string lobbyPlayerID,string playerObjectID)
+    void pongServerRpc(long sentTime , string lobbyPlayerID , string playerObjectID)
     {
-        
+
 
         var dateTimeSent = new DateTime(sentTime);
         var dif = DateTime.Now - dateTimeSent;
@@ -159,13 +167,13 @@ public class ServerGameManager : NetworkBehaviour
     }
     public void ResetSpawnpoints()
     {
-      spawnVolumes =  HighLevelNetcodeRef.HighLevelNetcode.currentMap.GetComponent<SpawnpointVolumes>().SpawnVolumes;
+        spawnVolumes = HighLevelNetcodeRef.Instance.currentMap.GetComponent<SpawnpointVolumes>().SpawnVolumes;
         if(gameMode != GameMode.ffa)
         {
             List<spawnVolume> newVolumes = new List<spawnVolume>();
             foreach(spawnVolume volume in spawnVolumes)
             {
-                if(volume.team== Team)
+                if(volume.team == Team)
                     newVolumes.Add(volume);
             }
             spawnVolumes = newVolumes;
@@ -173,18 +181,18 @@ public class ServerGameManager : NetworkBehaviour
     }
     public void setGameMode()
     {
-        int enumIndex = int.Parse(HighLevelNetcodeRef.HighLevelNetcode.currentLobby.Data[HighLevelNetcode.KEY_MODE].Value);
+        int enumIndex = int.Parse(HighLevelNetcodeRef.Instance.currentLobby.Data[HighLevelNetcode.KEY_MODE].Value);
         gameMode = ((HighLevelNetcode.GameMode)enumIndex);
     }
     public Vector3 getSpawnPosition()
     {
-       int index = Mathf.RoundToInt(UnityEngine.Random.value * spawnVolumes.Count );
+        int index = Mathf.RoundToInt(UnityEngine.Random.value * spawnVolumes.Count);
         var vol = spawnVolumes[index];
-        float x = UnityEngine.Random.Range(-vol.scale.x/2,vol.scale.x/2);
+        float x = UnityEngine.Random.Range(-vol.scale.x / 2 , vol.scale.x / 2);
         float y = UnityEngine.Random.Range(-vol.scale.y / 2 , vol.scale.y / 2);
         float z = UnityEngine.Random.Range(-vol.scale.z / 2 , vol.scale.z / 2); ;
 
-        Vector3 pos = vol.pos + new Vector3(x,y,z);
+        Vector3 pos = vol.pos + new Vector3(x , y , z);
         Debug.Log("spawnpoint found");
         return pos;
     }
@@ -196,7 +204,7 @@ public class ServerGameManager : NetworkBehaviour
 public class GameStatistics
 {
     public DateTime Created;
-    public Dictionary<string , PlayerStatistics> playerStats = new Dictionary<string, PlayerStatistics>(); //key is authservice.playerID
+    public Dictionary<string , PlayerStatistics> playerStats = new Dictionary<string , PlayerStatistics>(); //key is authservice.playerID
     public string HostID;
     public string getAuthKeyFromObjectID(string objID)
     {

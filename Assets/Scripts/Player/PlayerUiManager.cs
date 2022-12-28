@@ -19,6 +19,13 @@ public class PlayerUiManager : MonoBehaviour
 
     public TMPro.TextMeshProUGUI fpsText;
     public TMPro.TextMeshProUGUI pingText;
+
+    [SerializeField] GameObject playerListElement;
+    [SerializeField] GameObject playerListContent;
+    [SerializeField] GameObject playerListCanvas;
+    List<GameObject> playerListElements = new List<GameObject>();
+    List<TextReferences> playerList_TextRefs = new List<TextReferences>();
+    List<string> playerAuthIdPerElem = new List<string>();
     private void Start()
     {
         hitMarker.color = Color.clear;
@@ -28,6 +35,7 @@ public class PlayerUiManager : MonoBehaviour
         tickHitMarker();
         tickHealthText();
         oneSeccondTick();
+        TickTabPlayerMenu();
     }
     public void oneSeccondTick()
     {
@@ -73,5 +81,75 @@ public class PlayerUiManager : MonoBehaviour
 
 
         pingText.text = "0";
+    }
+    public void TickTabPlayerMenu()
+    {
+        if(Input.GetKey(KeyCode.Tab))
+        {
+            playerListCanvas.SetActive(true);
+            RefreshPlayerList();
+        }
+        else if(playerListCanvas.activeInHierarchy) //if active turn off
+        {
+            playerListCanvas.SetActive(false);
+        }
+    }
+    public void RefreshPlayerList()
+    {
+        if(HighLevelNetcodeRef.Instance.currentLobby.Players.Count != playerListElements.Count) //if needed, recreate all elements
+        {
+            foreach(var obj in playerListElements)
+            {
+                Destroy(obj);
+            }
+            playerListElements.Clear();
+            playerList_TextRefs.Clear();
+            playerAuthIdPerElem.Clear();
+
+            //all destroyed, now create
+
+            var players = HighLevelNetcodeRef.Instance.currentLobby.Players;
+            for(int i = 0 ; i < players.Count ; i++)
+            {
+                var player = players[i];
+                var element = Instantiate(playerListElement , playerListContent.transform);
+                var textRef = element.GetComponent<TextReferences>();
+                var AuthID = player.Id;
+
+                var playerStats = ServerGameManagerRef.Instance.gameStats.playerStats[AuthID];
+
+                //text ref order is = NAME,Ping,KILLS,DEATHS,DAMAGE,DAMAGETAKEN
+                textRef.text[0].text = AuthID; //to be replaced with name, names not yet implimented
+                textRef.text[1].text = playerStats.ping.ToString();
+                textRef.text[2].text = playerStats.kills.ToString();
+                textRef.text[3].text = playerStats.deaths.ToString();
+                textRef.text[4].text = playerStats.damageDone.ToString();
+                textRef.text[5].text = playerStats.damageTaken.ToString();
+
+                playerListElements.Add(element);
+                playerList_TextRefs.Add(textRef);
+                playerAuthIdPerElem.Add(AuthID);
+            }
+
+        }
+        else //if elements do not need to be created or destroyed, just refresh them
+        {
+            for(int i = 0 ; i < playerListElements.Count ; i++)
+            {
+                var element = playerListElements[i];
+                var textRef = playerList_TextRefs[i];
+                var AuthID = playerAuthIdPerElem[i];
+
+                var playerStats = ServerGameManagerRef.Instance.gameStats.playerStats[AuthID];
+
+                //text ref order is = NAME,Ping,KILLS,DEATHS,DAMAGE,DAMAGETAKEN
+                textRef.text[0].text = AuthID; //to be replaced with name, names not yet implimented
+                textRef.text[1].text = playerStats.ping.ToString();
+                textRef.text[2].text = playerStats.kills.ToString();
+                textRef.text[3].text = playerStats.deaths.ToString();
+                textRef.text[4].text = playerStats.damageDone.ToString();
+                textRef.text[5].text = playerStats.damageTaken.ToString();
+            }
+        }
     }
 }

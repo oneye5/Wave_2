@@ -37,7 +37,7 @@ public class HighLevelNetcode : NetworkBehaviour
     #endregion
     void Start()
     {
-        HighLevelNetcodeRef.HighLevelNetcode = this;
+        HighLevelNetcodeRef.Instance = this;
          UnityServices.InitializeAsync();
          AuthenticationService.Instance.SignInAnonymouslyAsync();
         gameManager = GetComponent<ServerGameManager>();
@@ -299,5 +299,5 @@ public class RelayData
 }
 public static class HighLevelNetcodeRef
 {
-  public  static HighLevelNetcode HighLevelNetcode;
+  public  static HighLevelNetcode Instance;
 }
