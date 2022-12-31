@@ -1,3 +1,4 @@
+using Unity.Multiplayer.Samples.Utilities.ClientAuthority;
 using Unity.Netcode;
 using Unity.Services.Authentication;
 using UnityEngine;
@@ -10,15 +11,12 @@ public class PlayerManager : NetworkBehaviour
     BodyMovement bodyMovement;
     SmoothHead smoothHead;
     Rigidbody rb; // main rb of body
-    WeaponManager weaponManager;
+    public WeaponManager weaponManager;
     Camera cam;
-    HealthHandle healthHandle;
+    public HealthHandle healthHandle;
     PlayerUiManager uiManager;
-   // public NetworkVariable<string> AuthID = new NetworkVariable<string>("" , NetworkVariableReadPermission.Everyone , NetworkVariableWritePermission.Owner);
     private void Start()
     {
-      //  if(IsOwner)
-      //      AuthID.Value = AuthenticationService.Instance.PlayerId;
         Cursor.lockState = CursorLockMode.Locked;
         headMovement = GetComponentInChildren<HeadMovement>();
         bodyMovement = GetComponentInChildren<BodyMovement>();
@@ -28,6 +26,7 @@ public class PlayerManager : NetworkBehaviour
         healthHandle = GetComponentInChildren<HealthHandle>();
         cam = GetComponentInChildren<Camera>();
         uiManager = GetComponentInChildren<PlayerUiManager>();
+        healthHandle.init();
         if(!IsOwner)
         {
             Debug.Log("player is not owner");
@@ -75,12 +74,17 @@ public class PlayerManager : NetworkBehaviour
         if(!IsOwner)
             return;
         smoothHead.transform.rotation = new Quaternion();
-        bodyMovement.gameObject.transform.position = ServerGameManagerRef.Instance.getSpawnPosition();
+        var spawnPos = ServerGameManagerRef.Instance.getSpawnPosition();
+        bodyMovement.gameObject.GetComponent<ClientNetworkTransform>().Teleport(spawnPos,new Quaternion(),Vector3.one);
+        bodyMovement.transform.position = spawnPos;
+
+       
 
         weaponManager.weapons.Clear();
         weaponManager.AddWeapon(WeaponTypes.Sniper);
 
         weaponManager.visuals.ChangeWeapon(0);
+        healthHandle.publicHealth = healthHandle.defaultHealth;
         Debug.Log("resetting player");
     }
     private void mouseLockStateTick()

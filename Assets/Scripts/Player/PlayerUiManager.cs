@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
 using Unity.Services.Authentication;
 using UnityEngine;
 using UnityEngine.UI;
@@ -29,6 +30,12 @@ public class PlayerUiManager : MonoBehaviour
     private void Start()
     {
         hitMarker.color = Color.clear;
+
+        if(healthHandle.IsOwner == false)
+        {
+            Debug.Log("health handle incorrect, getting correct one");
+            healthHandle =  this.GetComponentInParent<NetworkObject>().GetComponentInChildren<HealthHandle>();
+        }
     }
     public void Tick()
     {
@@ -67,12 +74,13 @@ public class PlayerUiManager : MonoBehaviour
     }
     public void tickHealthText()
     {
+        
         healthText.text = healthHandle.publicHealth.ToString();
     }
     public void tickClientStats() //such as fps and ping
     {
         fpsText.text = Mathf.Round(1.0f/ Time.smoothDeltaTime).ToString();
-        if(ServerGameManagerRef.Instance.gameStats.playerStats != null)
+        if(ServerGameManagerRef.Instance.gameStats != null && ServerGameManagerRef.Instance.gameStats.playerStats != null) //just to avoid errors
             if(ServerGameManagerRef.Instance.gameStats.playerStats.TryGetValue(AuthenticationService.Instance.PlayerId,out PlayerStatistics stats))
             {
                 pingText.text = Mathf.RoundToInt(stats.ping).ToString();

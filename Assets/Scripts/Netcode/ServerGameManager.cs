@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Unity.Netcode;
 using Unity.Services.Authentication;
 using UnityEngine;
+using UnityEngine.Rendering;
 using static HighLevelNetcode;
 
 public class ServerGameManager : NetworkBehaviour
@@ -24,7 +25,7 @@ public class ServerGameManager : NetworkBehaviour
         var playerFromAuth = gameStats.getAuthKeyFromObjectID(PlayerObjectID_from);
         healthComp.health.Value -= damage;
 
-        if(healthComp.health.Value < 0)
+        if(healthComp.health.Value <= 0)
         {
             healthComp.health.Value = healthComp.defaultHealth;
             playerKilled_ClientRpc(PlayerObjectID_to);
@@ -35,11 +36,11 @@ public class ServerGameManager : NetworkBehaviour
 
         gameStats.playerStats[playerToAuth].damageTaken += damage;
         gameStats.playerStats[playerFromAuth].damageDone += damage;
-        playerHit_ClientRpc(damage , PlayerObjectID_from , PlayerObjectID_to);
+        playerHit_ClientRpc(damage , PlayerObjectID_from , PlayerObjectID_to,healthComp.health.Value);
 
     }
     [ClientRpc]
-    public void playerHit_ClientRpc(float damage , string PlayerObjectID_from , string PlayerObjectID_to)
+    public void playerHit_ClientRpc(float damage , string PlayerObjectID_from , string PlayerObjectID_to ,float currentHealth)
     {
         var playerTo = GetNetworkObject(ulong.Parse(PlayerObjectID_to));
 
@@ -48,7 +49,12 @@ public class ServerGameManager : NetworkBehaviour
             return;
         var playerFrom = GetNetworkObject(ulong.Parse(PlayerObjectID_from));
 
-        var visuals = playerTo.GetComponentInChildren<BulletVisuals>();
+        var pManager = playerTo.GetComponent<PlayerManager>();
+        var visuals = pManager.weaponManager.visuals;
+        var healthHandle = pManager.healthHandle;
+
+
+        healthHandle.publicHealth = currentHealth;
         visuals.recoilPunchRandom(playerTo.GetComponentInChildren<Camera>().transform , damage / 10 , 0.25f);
     }
 
@@ -59,7 +65,10 @@ public class ServerGameManager : NetworkBehaviour
         if(!player.IsOwner)
             return;
 
-        player.GetComponent<PlayerManager>().ResetPlayer();
+        var pManager = player.GetComponent<PlayerManager>();
+            
+          pManager.ResetPlayer();
+        pManager.healthHandle.publicHealth = pManager.healthHandle.defaultHealth;
 
     }
     [ServerRpc]
@@ -83,6 +92,9 @@ public class ServerGameManager : NetworkBehaviour
         if(!gameStats.playerStats.ContainsKey(lobbyID))
             gameStats.playerStats.Add(lobbyID , playerStats);
         Debug.Log("Player Joined " + lobbyID);
+
+        var healthCmp = GetNetworkObject(playerObjectID).GetComponentInChildren<HealthHandle>();
+        healthCmp.health.Value = healthCmp.defaultHealth;
     }
 
     //server management vars
@@ -186,15 +198,25 @@ public class ServerGameManager : NetworkBehaviour
     }
     public Vector3 getSpawnPosition()
     {
-        int index = Mathf.RoundToInt(UnityEngine.Random.value * spawnVolumes.Count);
-        var vol = spawnVolumes[index];
-        float x = UnityEngine.Random.Range(-vol.scale.x / 2 , vol.scale.x / 2);
-        float y = UnityEngine.Random.Range(-vol.scale.y / 2 , vol.scale.y / 2);
-        float z = UnityEngine.Random.Range(-vol.scale.z / 2 , vol.scale.z / 2); ;
+        try
+        {
+            int index = Mathf.RoundToInt(UnityEngine.Random.value * spawnVolumes.Count);
+            if(index > spawnVolumes.Count-1)
+                index = spawnVolumes.Count-1;
+            var vol = spawnVolumes[index];
+            float x = UnityEngine.Random.Range(-vol.scale.x / 2 , vol.scale.x / 2);
+            float y = UnityEngine.Random.Range(-vol.scale.y / 2 , vol.scale.y / 2);
+            float z = UnityEngine.Random.Range(-vol.scale.z / 2 , vol.scale.z / 2); ;
 
-        Vector3 pos = vol.pos + new Vector3(x , y , z);
-        Debug.Log("spawnpoint found");
-        return pos;
+            Vector3 pos = vol.pos + new Vector3(x , y , z);
+            Debug.Log("spawnpoint found");
+            return pos;
+        }
+        catch(Exception e)
+        {
+            Debug.LogError("NO SPAWNPOINT FOUND, (GETSPAWNPOS)" + e.Message);
+            return new Vector3(0 , 5 , 0);
+        }
     }
     public void AssignTeam()
     {

@@ -72,9 +72,12 @@ public class HighLevelNetcode : NetworkBehaviour
         var joinCode = l.Data[KEY_JOINCODE].Value;
         Debug.Log("joining " + joinCode);
         await joinRelay(joinCode);
-        NetworkManager.Singleton.StartClient();
+        
 
-        initGame(l);
+        initGame_Wmap(l);
+        NetworkManager.Singleton.StartClient();
+        
+        ServerGameManagerRef.Instance.ServerStart();
         return true;
     }
     public async Task CreateGame(int maxPlayers , string lobbyname , int map , int mode)
@@ -83,7 +86,7 @@ public class HighLevelNetcode : NetworkBehaviour
         var l =   await createLobby(relayData.joinCode,relayData.alloc.Region);
         NetworkManager.Singleton.StartHost();
 
-        initGame(l);
+        initGame_Wmap(l);
         ServerGameManagerRef.Instance.ServerStart();
     }
     public async void QuickCreateGame()
@@ -95,7 +98,6 @@ public class HighLevelNetcode : NetworkBehaviour
         try
         {  
             var Responce = await Lobbies.Instance.QueryLobbiesAsync();
-           // Debug.Log( Responce.Results[0].Data[KEY_JOINCODE].Value);
             return Responce.Results;
         }
         catch(LobbyServiceException x)
@@ -216,7 +218,7 @@ public class HighLevelNetcode : NetworkBehaviour
         }
         catch(LobbyServiceException e)
         {
-            Debug.LogWarning(e);
+            Debug.LogError(e);
         }
     }
     public async void leaveLobby(Lobby l , string playerID)
@@ -261,7 +263,7 @@ public class HighLevelNetcode : NetworkBehaviour
         ffa = 0,
     }
 
-    private void initGame(Lobby l) //spawns map
+    private void initGame_Wmap(Lobby l) //spawns map
     {
         Debug.Log("INITIALIZING");
         int mapIndex = int.Parse(l.Data[KEY_MAP].Value);
