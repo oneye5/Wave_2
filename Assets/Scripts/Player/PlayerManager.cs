@@ -105,7 +105,8 @@ public class PlayerManager : NetworkBehaviour
 
     void OnDestroy()
     {
-        if(IsOwner)
+        //
+        if(IsOwner && HighLevelNetcodeRef.Instance.currentLobby != null)
             ServerGameManagerRef.Instance.hostLeave();
     }
 }

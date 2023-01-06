@@ -29,4 +29,16 @@ public class Global_Ui_Manager : MonoBehaviour
     {
         Parent.SetActive(false);
     }
+    public void LeaveToMenu()
+    {
+        if(HighLevelNetcodeRef.Instance.currentLobby != null)
+        HighLevelNetcodeRef.Instance.selfLeaveGame();
+
+        ServerGameManagerRef.Instance.gameStats = null;
+        CloseMenu();
+    }
+    public void QuitGame()
+    {
+        Application.Quit();
+    }
 }
