@@ -23,13 +23,15 @@ public class BodyMovement : MonoBehaviour
     [SerializeField] float A_wishDirMargin;
     [SerializeField] float A_strafeAccelMulti;
 
+    [HideInInspector] public CapsuleCollider collider;
     bool grounded;
     bool justLanded;
     Rigidbody rb;
 
-    private void Start()
+    private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        collider = GetComponent<CapsuleCollider>();
     }
 
     public void Tick(PlayerInput input,Transform head)

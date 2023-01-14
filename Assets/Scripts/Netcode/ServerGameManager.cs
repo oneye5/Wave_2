@@ -102,14 +102,18 @@ public class ServerGameManager : NetworkBehaviour
     public void ServerStart()
     {
         gameStats = new GameStatistics();
-        gameStats.Created = DateTime.Now;
-        gameStats.HostID = AuthenticationService.Instance.PlayerId;
-        PlayerStatistics hostStats = new PlayerStatistics();
 
-        hostStats.playerObjectID = Camera.main.GetComponentInParent<NetworkObject>().NetworkObjectId;
-        hostStats.isHost = true;
+        if(IsHost || IsServer)
+        {
+            gameStats.Created = DateTime.Now;
+            gameStats.HostID = AuthenticationService.Instance.PlayerId;
+            PlayerStatistics hostStats = new PlayerStatistics();
 
-        gameStats.playerStats.Add(AuthenticationService.Instance.PlayerId , hostStats);
+            hostStats.playerObjectID = Camera.main.GetComponentInParent<NetworkObject>().NetworkObjectId;
+            hostStats.isHost = true;
+
+            gameStats.playerStats.Add(AuthenticationService.Instance.PlayerId , hostStats);
+        }
     }
 
     //ping pong system
@@ -209,7 +213,8 @@ public class ServerGameManager : NetworkBehaviour
             float z = UnityEngine.Random.Range(-vol.scale.z / 2 , vol.scale.z / 2); ;
 
             Vector3 pos = vol.pos + new Vector3(x , y , z);
-            Debug.Log("spawnpoint found");
+            Debug.Log("spawnpoint found " + pos.ToString());
+            Debug.Log("index is " + index);
             return pos;
         }
         catch(Exception e)

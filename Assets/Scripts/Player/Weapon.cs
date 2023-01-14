@@ -9,7 +9,8 @@ using Vector3 = UnityEngine.Vector3;
 
 public enum WeaponTypes
 {
-    Sniper
+    Sniper,
+    RocketLauncher
 }
 public class WeaponAttributes
 {
@@ -63,8 +64,8 @@ public class WeaponAttributes
         {
             case WeaponTypes.Sniper:
                 MagSize = 1;
-                FireTime = 0;
-                ReloadTime = 1;
+                FireTime = 1;
+                ReloadTime = 0;
                 SpawnCount = 1;
                 Inaccuracy = 0;
                 Damage = 75;
@@ -74,6 +75,7 @@ public class WeaponAttributes
                 HitIndex = 0;
                 ModelIndex = 0;
                 TrailIndex = 0;
+                FlashIndex = 0;
                 HitIndex = 0;
                 HitscanRange = 100;
                 AreaDamage = false;
@@ -86,6 +88,44 @@ public class WeaponAttributes
 
                 Recoil_weaponJumpRecovery = 0.9f;
                 Recoil_weaponJumpRot = new Vector3(-25 , 0 , 0);
+                Recoil_weaponJumpTime = 0.2f;
+                Recoil_weaponPosJump = new Vector3(0 , 0 , -0.05f);
+                Recoil_weaponShakeDuration = 0.25f;
+                Recoil_weaponShakeStr = 5f;
+                break;
+
+            case WeaponTypes.RocketLauncher:
+                MagSize = 4;
+                FireTime = 1;
+                ReloadTime = 2;
+                SpawnCount = 1;
+                Inaccuracy = 0;
+                Damage = 50;
+                HeadshotMulti = 1.0f;
+                Hitscan = false;
+                ModelIndex = 1;
+                TrailIndex = 1;
+                HitIndex = 1;
+                FlashIndex = 1;
+
+                ProjectileGravity = 0;
+                ProjectileImpulse = 10;
+                ProjectileDrag = 0;
+                ProjectileLifetime = 5;
+
+                AreaDamage = true;
+                AreaImpulse = 10;
+                AreaRadius = 5;
+
+
+                Recoil_camJump = new Vector3(-2 , 0 , 0);
+                Recoil_camJumpRecovery = 0.75f;
+                Recoil_camJumpTime = 0.1f;
+                Recoil_camShakeDuration = 0.25f;
+                Recoil_camShakeStr = 1;
+
+                Recoil_weaponJumpRecovery = 0.9f;
+                Recoil_weaponJumpRot = new Vector3(-10 , 0 , 0);
                 Recoil_weaponJumpTime = 0.2f;
                 Recoil_weaponPosJump = new Vector3(0 , 0 , -0.05f);
                 Recoil_weaponShakeDuration = 0.25f;
@@ -114,11 +154,12 @@ public class Weapon
 
     public List<Bullet> Tick(float deltaTime , bool reload , bool shoot , Transform Head )
     {
-       // Debug.Log("reload time " + remainingReloadTime + " firetime " + remainingFireTime + " mag " + mag);
+        Debug.Log("reload time " + remainingReloadTime + " firetime " + remainingFireTime + " mag " + mag);
+
         if(remainingFireTime > 0)
-        {
             remainingFireTime -= deltaTime;
-        }
+       
+
         if(remainingReloadTime > 0)
         {
             remainingReloadTime -= deltaTime;
@@ -129,14 +170,18 @@ public class Weapon
             }
         }
 
+        if(mag <= 0 && remainingReloadTime <= 0)
+            remainingReloadTime = weaponAttributes.ReloadTime;
+        
 
-        if(!shoot || remainingReloadTime > 0 || mag == 0) //if not shooting return null
+        if(!shoot || remainingReloadTime > 0 || mag == 0 || remainingFireTime > 0) //if not shooting return null
             return null;
 
         remainingFireTime = weaponAttributes.FireTime;
         mag--;
-        if(mag <= 0)
-            remainingReloadTime = weaponAttributes.ReloadTime;
+
+       // if(mag <= 0)
+         //   remainingReloadTime = weaponAttributes.ReloadTime;
 
 
         List<Bullet> bullets = new List<Bullet>();

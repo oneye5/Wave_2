@@ -28,4 +28,11 @@ public struct PlayerInput
             reload = true;
         else reload = false;
     }
+    public void Clear()
+    {
+        mDelta = Vector2.zero;
+        keyState = Vector3.zero;
+        fire = false;
+        reload = false;
+    }
 }

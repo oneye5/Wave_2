@@ -26,6 +26,8 @@ public class WeaponManager : NetworkBehaviour
     }
     public void Tick(PlayerInput input , Transform head) //handels reloading & firing
     {
+        if(weapons.Count <= 0)
+            return;
         //tick all weapons that are not active
         for(int i = 0 ; i < weapons.Count ; i++)
         {

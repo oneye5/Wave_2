@@ -1,7 +1,10 @@
+using DG.Tweening;
+using System.Collections;
 using Unity.Multiplayer.Samples.Utilities.ClientAuthority;
 using Unity.Netcode;
 using Unity.Services.Authentication;
 using UnityEngine;
+using UnityEngine.XR;
 using Cursor = UnityEngine.Cursor;
 
 public class PlayerManager : NetworkBehaviour
@@ -15,6 +18,8 @@ public class PlayerManager : NetworkBehaviour
     Camera cam;
     public HealthHandle healthHandle;
     PlayerUiManager uiManager;
+
+    private bool resetting = false;
     private void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -46,6 +51,7 @@ public class PlayerManager : NetworkBehaviour
 
             ServerGameManagerRef.Instance.GameStart();
             ResetPlayer();
+            GRAPHICS_SETTINGS_MANAGER_REF.Instance.setCamProperties(cam);
         }
 
 
@@ -54,12 +60,19 @@ public class PlayerManager : NetworkBehaviour
     {
         if(!IsOwner)
             return;
-        playerInput.Tick();
+        
+        uiManager.Tick();
+
+        if(!Global_Ui_Manager_Ref.Instance.menuActive)
+            playerInput.Tick();
+        else
+            playerInput.Clear();
+
         headMovement.Tick(playerInput);
         weaponManager.Tick(playerInput , headMovement.gameObject.transform);
-        bodyMovement.Tick(playerInput , headMovement.gameObject.transform);
 
-        uiManager.Tick();
+        if(!resetting)
+        bodyMovement.Tick(playerInput , headMovement.gameObject.transform);
 
         mouseLockStateTick();
     }
@@ -73,26 +86,54 @@ public class PlayerManager : NetworkBehaviour
     {
         if(!IsOwner)
             return;
-        smoothHead.transform.rotation = new Quaternion();
-        var spawnPos = ServerGameManagerRef.Instance.getSpawnPosition();
-        bodyMovement.gameObject.GetComponent<ClientNetworkTransform>().Teleport(spawnPos,new Quaternion(),Vector3.one);
-        bodyMovement.transform.position = spawnPos;
 
-       
 
         weaponManager.weapons.Clear();
-        weaponManager.AddWeapon(WeaponTypes.Sniper);
+        var localOffset = headMovement.transform.localPosition;
+        rb.position = new Vector3(0 , -1000 , 0);
+        headMovement.transform.localPosition = new Vector3(0,-rb.position.y + 25f,0);
+        weaponManager.visuals.ChangeWeapon(-1);
 
+        rb.useGravity = false;
+        rb.velocity = new Vector3(0 , 0 , 0);
+        bodyMovement.collider.enabled = false;
+         resetting = true;
+        Debug.Log("spawn delay started");
+      
+        StartCoroutine( resetWithDelay(4f,localOffset));
+        
+    }
+    IEnumerator resetWithDelay(float delay,Vector3 localHeadPos)
+    {
+        yield return new WaitForSeconds(delay);
+
+         weaponManager.AddWeapon(WeaponTypes.Sniper);
+         smoothHead.transform.rotation = new Quaternion();
+        var spawnPos = ServerGameManagerRef.Instance.getSpawnPosition();
         weaponManager.visuals.ChangeWeapon(0);
         healthHandle.publicHealth = healthHandle.defaultHealth;
-        Debug.Log("resetting player");
+        Debug.Log("resetting player to "  + spawnPos);
+        rb.position =(spawnPos);
+        headMovement.transform.localPosition = localHeadPos;
+   
+        resetting = false;
+        rb.useGravity = true;
+        bodyMovement.collider.enabled = true;
+        rb.velocity = new Vector3 (0 , 0 , 0);
     }
+
+    private bool winFocus;
     private void mouseLockStateTick()
     {
         if(Input.GetKeyDown(KeyCode.Escape))
         {
             Cursor.lockState = CursorLockMode.None;
         }
+        if(Input.GetKeyDown(KeyCode.Mouse0) && winFocus && !Global_Ui_Manager_Ref.Instance.menuActive)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+        }
+
 
     }
     private void OnApplicationFocus(bool focus)
@@ -101,6 +142,8 @@ public class PlayerManager : NetworkBehaviour
             Cursor.lockState = CursorLockMode.Locked;
         else
             Cursor.lockState = CursorLockMode.None;
+
+        winFocus = focus;
     }
 
     void OnDestroy()

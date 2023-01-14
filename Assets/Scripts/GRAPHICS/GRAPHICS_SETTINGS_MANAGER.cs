@@ -9,9 +9,9 @@ using UnityEngine.Rendering;
 
 public class GRAPHICS_SETTINGS_MANAGER : MonoBehaviour
 {
-    
+
     public float fov;
-    public int aaMode; //0 = none, 1 = fxaa, 2 = tmaa,3 = smaa
+    public int aaMode; //0 = none, 1 = fxaa, 2 = taa,3 = smaa
     public bool deferred;
     public int matQuality; // 0 - 2 (low , med, high)
     public bool bloom;
@@ -23,7 +23,8 @@ public class GRAPHICS_SETTINGS_MANAGER : MonoBehaviour
     private HDAdditionalCameraData cameraData;
     private FrameSettings frameSettings;
     private FrameSettingsOverrideMask frameSettingsOverrideMask;
-   public void resetToDefault()
+
+    public void resetToDefault()
     {
         fov = 90;
         aaMode = 0;
@@ -31,8 +32,10 @@ public class GRAPHICS_SETTINGS_MANAGER : MonoBehaviour
         matQuality = 2;
         bloom = true;
         ssr = true;
-        fullscreenMode = 1;
-        resolution = new Vector2Int(Screen.currentResolution.width,Screen.currentResolution.height);
+        fullscreenMode = 3;
+        UnityEngine.Debug.Log(Screen.currentResolution.width + " h " + Screen.currentResolution.height);
+        resolution = new Vector2Int(Screen.currentResolution.width , Screen.currentResolution.height);
+
 
     }
     void init(Camera cam)
@@ -54,25 +57,25 @@ public class GRAPHICS_SETTINGS_MANAGER : MonoBehaviour
 
         frameSettingsOverrideMask.mask[(uint)FrameSettingsField.VirtualTexturing] = true;
 
-        
+
 
         cameraData.renderingPathCustomFrameSettingsOverrideMask = frameSettingsOverrideMask;
     }
     public void setCamProperties(Camera cam)
     {
         init(cam);
-        
-        if(deferred)
-            frameSettings.litShaderMode = LitShaderMode.Deferred;
-        else
-            frameSettings.litShaderMode = LitShaderMode.Forward;
 
-        if(matQuality ==0)
+        //     if(deferred)
+        //       frameSettings.litShaderMode = LitShaderMode.Deferred;
+        //else
+        //      frameSettings.litShaderMode = LitShaderMode.Forward;
+
+        if(matQuality == 0)
             frameSettings.materialQuality = UnityEngine.Rendering.MaterialQuality.Low;
-        else if(matQuality ==1)
+        else if(matQuality == 1)
             frameSettings.materialQuality = UnityEngine.Rendering.MaterialQuality.Medium;
-        else if(matQuality==2)
-            frameSettings.materialQuality = UnityEngine.Rendering.MaterialQuality.High; 
+        else if(matQuality == 2)
+            frameSettings.materialQuality = UnityEngine.Rendering.MaterialQuality.High;
 
         cameraData.antialiasing = (HDAdditionalCameraData.AntialiasingMode)aaMode; //0 = none, 1 = fxaa, 2 = tmaa,3 = smaa
 
@@ -86,110 +89,26 @@ public class GRAPHICS_SETTINGS_MANAGER : MonoBehaviour
         else
             frameSettings.SetEnabled(FrameSettingsField.SSR , false);
         //other settings
-        
 
-        //Screen.SetResolution(resolution.x , resolution.y , false);
+        if(fullscreenMode == 0 || fullscreenMode == 1)
+        Screen.SetResolution(Screen.currentResolution.width , Screen.height , true);
+        else
+            Screen.SetResolution(Screen.currentResolution.width , Screen.height , true);
         Screen.fullScreenMode = (FullScreenMode)fullscreenMode;
-
+        cam.fieldOfView = fov;
 
         SetFrameSettings(frameSettings);
     }
     private void SetFrameSettings(FrameSettings frameSettings)
     {
-            cameraData.renderingPathCustomFrameSettings = frameSettings;
-            UnityEngine.Debug.Log("cam settings changed");
+        cameraData.renderingPathCustomFrameSettings = frameSettings;
+        UnityEngine.Debug.Log("cam settings changed");
     }
-    
+
     private void Awake()
     {
         GRAPHICS_SETTINGS_MANAGER_REF.Instance = this;
-    }
-    private void Update()
-    {
-        if(Input.GetKeyDown("0"))
-        {
-            setCamProperties(Camera.main);
-        }
-        if(Input.GetKeyDown("1"))
-        {
-            resetToDefault();
-        }
-
-
-        if(Input.GetKeyDown("e"))
-        {
-            aaMode = 0;
-        }
-        if(Input.GetKeyDown("r"))
-        {
-            aaMode = 1;
-        }
-        if(Input.GetKeyDown("t"))
-        {
-            aaMode = 2;
-        }
-        if(Input.GetKeyDown("y"))
-        {
-            aaMode = 3;
-        }
-
-
-        if(Input.GetKeyDown("u"))
-        {
-            fullscreenMode = 0;
-        }
-        if(Input.GetKeyDown("i"))
-        {
-            fullscreenMode = 1;
-        }
-        if(Input.GetKeyDown("o"))
-        {
-            fullscreenMode = 2;
-        }
-        if(Input.GetKeyDown("p"))
-        {
-            fullscreenMode = 3;
-        }
-
-        if(Input.GetKeyDown("f"))
-        {
-            ssr = false;
-        }
-        if(Input.GetKeyDown("g"))
-        {
-            ssr = true;
-        }
-
-        if(Input.GetKeyDown("h"))
-        {
-            bloom = false;
-        }
-        if(Input.GetKeyDown("j"))
-        {
-            bloom = true;
-        }
-
-        if(Input.GetKeyDown("k"))
-        {
-            matQuality = 0;
-        }
-        if(Input.GetKeyDown("l"))
-        {
-            matQuality = 1;
-        }
-        if(Input.GetKeyDown(";"))
-        {
-            matQuality = 2;
-        }
-
-        if(Input.GetKeyDown("z"))
-        {
-            deferred = true;
-        }
-        if(Input.GetKeyDown("x"))
-        {
-            deferred = false;
-        }
+        resetToDefault();
     }
 }
 

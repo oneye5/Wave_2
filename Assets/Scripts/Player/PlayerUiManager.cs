@@ -94,12 +94,14 @@ public class PlayerUiManager : MonoBehaviour
     {
         if(Input.GetKey(KeyCode.Tab))
         {
+            Cursor.lockState = CursorLockMode.None;
             playerListCanvas.SetActive(true);
             RefreshPlayerList();
         }
         else if(playerListCanvas.activeInHierarchy) //if active turn off
         {
             playerListCanvas.SetActive(false);
+            Cursor.lockState = CursorLockMode.Locked;
         }
     }
     public void RefreshPlayerList()

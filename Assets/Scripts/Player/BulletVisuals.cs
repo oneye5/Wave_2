@@ -90,6 +90,10 @@ public class BulletVisuals : NetworkBehaviour
     public void ChangeWeapon(int index)
     {
         Destroy(CurrentWeapon);
+        if(index == -1)
+            return;
+
+
         CurrentWeapon = Instantiate(
             ModelPrefabs[index] ,
             new Vector3(0 , 0 , 0) ,

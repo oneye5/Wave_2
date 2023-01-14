@@ -11,6 +11,7 @@ using Unity.Services.Lobbies.Models;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class HighLevelNetcode : NetworkBehaviour
 {
@@ -34,6 +35,8 @@ public class HighLevelNetcode : NetworkBehaviour
     public Lobby currentLobby;
     [SerializeField] float heartbeatDelay;
     float timeTillHeartbeat;
+
+
     #endregion
     void Start()
     {
@@ -49,36 +52,61 @@ public class HighLevelNetcode : NetworkBehaviour
     #region high level methods
     public async void QuickPlay() //joins a lobby, if none exist, create one
     {
+        Global_Ui_Manager_Ref.Instance.OpenLoadingScreen();
         //add more advanced way of picking a lobby in the future
         var lobbies = await getLobbies();
-        if(lobbies.Count != 0)
+        int lobbyIndex = 0;
+
+        findAndJoin:
+        if(lobbies.Count > lobbyIndex)
         {
-            await JoinGame(lobbies[0]);
-            return;
+            try
+            {
+                await JoinGame(lobbies[lobbyIndex]);
+                return;
+            }
+            catch
+            {
+                Debug.LogWarning("failed joining lobby");
+                lobbyIndex++;
+                goto findAndJoin;
+            }
+           
         }
 
         QuickCreateGame();
+        Global_Ui_Manager_Ref.Instance.CloseLoadingScreen();
     }
     public async Task<bool> JoinGame(Lobby l)
     {
-        if(l == null)
+        try
         {
-            Debug.LogError("HighLevel_Netcode.JoinGame(Lobby) : Lobby was null!");
+            if(l == null)
+            {
+                Debug.LogError("HighLevel_Netcode.JoinGame(Lobby) : Lobby was null!");
+                return false;
+            }
+            Global_Ui_Manager_Ref.Instance.OpenLoadingScreen();
+
+            await checkPlayerExists(l);
+            l = await joinLobby(l);
+
+            var joinCode = l.Data[KEY_JOINCODE].Value;
+            Debug.Log("joining " + joinCode);
+            await joinRelay(joinCode);
+
+
+            initGame_Wmap(l);
+            NetworkManager.Singleton.StartClient();
+
+            ServerGameManagerRef.Instance.ServerStart();
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError(e.Message);
             return false;
         }
-
-        l = await joinLobby(l);
-
-        var joinCode = l.Data[KEY_JOINCODE].Value;
-        Debug.Log("joining " + joinCode);
-        await joinRelay(joinCode);
-        
-
-        initGame_Wmap(l);
-        NetworkManager.Singleton.StartClient();
-        
-        ServerGameManagerRef.Instance.ServerStart();
-        return true;
     }
     public async Task CreateGame(int maxPlayers , string lobbyname , int map , int mode)
     {
@@ -168,6 +196,18 @@ public class HighLevelNetcode : NetworkBehaviour
     }
     #endregion
     #region lobby methods
+    public async Task<bool> checkPlayerExists(Lobby l)
+    {
+        foreach(Player x in l.Players)
+        {
+            if(x.Id == AuthenticationService.Instance.PlayerId)
+            {
+               await LobbyService.Instance.RemovePlayerAsync(l.Id , x.Id);
+                return true;
+            }
+        }
+        return false;
+    }
     public async Task<Lobby> joinLobby(Lobby l)
     {
         try
@@ -275,7 +315,7 @@ public class HighLevelNetcode : NetworkBehaviour
         mainMenuUI.SetActive(false);
         currentLobby = l;
         
-
+        Global_Ui_Manager_Ref.Instance.CloseLoadingScreen();
     }
 
 
