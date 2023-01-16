@@ -11,13 +11,13 @@ public class PlayerManager : NetworkBehaviour
 {
     PlayerInput playerInput;
     HeadMovement headMovement;
-    BodyMovement bodyMovement;
+    public BodyMovement bodyMovement;
     SmoothHead smoothHead;
-    Rigidbody rb; // main rb of body
+    public Rigidbody rb; // main rb of body
     public WeaponManager weaponManager;
     Camera cam;
     public HealthHandle healthHandle;
-    PlayerUiManager uiManager;
+    public PlayerUiManager uiManager;
 
     private bool resetting = false;
     private void Start()
@@ -52,9 +52,14 @@ public class PlayerManager : NetworkBehaviour
             ServerGameManagerRef.Instance.GameStart();
             ResetPlayer();
             GRAPHICS_SETTINGS_MANAGER_REF.Instance.setCamProperties(cam);
+            MainPlayer.Instance = this;
+            
+            if(WeaponStatsCache.weaponAttributes == null)
+            WeaponStatsCache.CreateCache();
         }
 
 
+        
     }
     void Update()
     {
@@ -108,7 +113,8 @@ public class PlayerManager : NetworkBehaviour
         yield return new WaitForSeconds(delay);
 
          weaponManager.AddWeapon(WeaponTypes.Sniper);
-         smoothHead.transform.rotation = new Quaternion();
+        weaponManager.AddWeapon(WeaponTypes.RocketLauncher);
+        smoothHead.transform.rotation = new Quaternion();
         var spawnPos = ServerGameManagerRef.Instance.getSpawnPosition();
         weaponManager.visuals.ChangeWeapon(0);
         healthHandle.publicHealth = healthHandle.defaultHealth;
@@ -150,6 +156,15 @@ public class PlayerManager : NetworkBehaviour
     {
         //
         if(IsOwner && HighLevelNetcodeRef.Instance.currentLobby != null)
+        {
+            MainPlayer.Instance = null;
             ServerGameManagerRef.Instance.hostLeave();
+        }
+        
     }
+}
+
+public static class MainPlayer
+{
+    public static PlayerManager Instance;
 }

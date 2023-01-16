@@ -93,7 +93,7 @@ public class GRAPHICS_SETTINGS_MANAGER : MonoBehaviour
         if(fullscreenMode == 0 || fullscreenMode == 1)
         Screen.SetResolution(Screen.currentResolution.width , Screen.height , true);
         else
-            Screen.SetResolution(Screen.currentResolution.width , Screen.height , true);
+            Screen.SetResolution(Screen.currentResolution.width , Screen.height , false);
         Screen.fullScreenMode = (FullScreenMode)fullscreenMode;
         cam.fieldOfView = fov;
 

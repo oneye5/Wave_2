@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 using Quaternion = UnityEngine.Quaternion;
 using Random = UnityEngine.Random;
@@ -9,8 +10,8 @@ using Vector3 = UnityEngine.Vector3;
 
 public enum WeaponTypes
 {
-    Sniper,
-    RocketLauncher
+    Sniper = 0,
+    RocketLauncher = 1
 }
 public class WeaponAttributes
 {
@@ -31,6 +32,7 @@ public class WeaponAttributes
     public int TrailIndex;
     public int HitIndex;
     public int FlashIndex;
+    public int ProjectileIndex;
 
     public float HitscanRange;
 
@@ -65,7 +67,7 @@ public class WeaponAttributes
             case WeaponTypes.Sniper:
                 MagSize = 1;
                 FireTime = 1;
-                ReloadTime = 0;
+                ReloadTime = 1.25f;
                 SpawnCount = 1;
                 Inaccuracy = 0;
                 Damage = 75;
@@ -103,15 +105,18 @@ public class WeaponAttributes
                 Damage = 50;
                 HeadshotMulti = 1.0f;
                 Hitscan = false;
+
+                ProjectileIndex = 1;
                 ModelIndex = 1;
                 TrailIndex = 1;
                 HitIndex = 1;
                 FlashIndex = 1;
+                
 
                 ProjectileGravity = 0;
-                ProjectileImpulse = 10;
+                ProjectileImpulse = 1;
                 ProjectileDrag = 0;
-                ProjectileLifetime = 5;
+                ProjectileLifetime = 10;
 
                 AreaDamage = true;
                 AreaImpulse = 10;
@@ -154,34 +159,40 @@ public class Weapon
 
     public List<Bullet> Tick(float deltaTime , bool reload , bool shoot , Transform Head )
     {
-        Debug.Log("reload time " + remainingReloadTime + " firetime " + remainingFireTime + " mag " + mag);
+        
 
         if(remainingFireTime > 0)
             remainingFireTime -= deltaTime;
        
 
-        if(remainingReloadTime > 0)
+        if(remainingReloadTime > 0) 
         {
             remainingReloadTime -= deltaTime;
 
-            if(remainingReloadTime < 0)
+            if(remainingReloadTime <= 0)//reload completion
             {
+                Debug.Log("finishing reload");
                 mag = weaponAttributes.MagSize;
             }
         }
 
         if(mag <= 0 && remainingReloadTime <= 0)
+        {
+            Debug.Log("starting reload (" + weaponAttributes.ReloadTime + ")");
             remainingReloadTime = weaponAttributes.ReloadTime;
+        }
         
 
         if(!shoot || remainingReloadTime > 0 || mag == 0 || remainingFireTime > 0) //if not shooting return null
             return null;
 
+
+
+        //this code only executes if shooting
+        Debug.Log("reload time " + remainingReloadTime + " firetime " + remainingFireTime + " mag " + mag);
         remainingFireTime = weaponAttributes.FireTime;
         mag--;
 
-       // if(mag <= 0)
-         //   remainingReloadTime = weaponAttributes.ReloadTime;
 
 
         List<Bullet> bullets = new List<Bullet>();
@@ -220,6 +231,21 @@ public class Weapon
         mag = weaponAttributes.MagSize;
         remainingFireTime = 0;
         remainingReloadTime = weaponAttributes.ReloadTime;
+        weaponType = type;
     }
 }
 
+public static class WeaponStatsCache
+{
+    public static List<WeaponAttributes> weaponAttributes; //index inline with enum
+    public static void CreateCache()
+    {
+        weaponAttributes = new List<WeaponAttributes>();
+        var enumSize = Enum.GetNames(typeof(WeaponTypes)).Length;
+        for(int i = 0 ; i < enumSize ; i++)
+        {
+            var attribute = new WeaponAttributes( ((WeaponTypes)i));
+            weaponAttributes.Add(attribute);
+        }
+    }
+}    

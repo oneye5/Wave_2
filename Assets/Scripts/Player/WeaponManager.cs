@@ -24,10 +24,34 @@ public class WeaponManager : NetworkBehaviour
         Weapon w = new Weapon(type);
         weapons.Add(w);
     }
-    public void Tick(PlayerInput input , Transform head) //handels reloading & firing
+    public void SwitchWeapon(int i)
     {
-        if(weapons.Count <= 0)
+        ActiveWeapon = i;
+        visuals.ChangeWeapon(i);
+    }
+    public void Tick(PlayerInput input , Transform head) //handels reloading & firing & weapon switching
+    {
+        if(weapons.Count <= 0) //contains nothing when reseting player
             return;
+
+
+
+        //weapon switching logic
+        if(input.weaponSwitch !=null)
+        {
+            if(input.weaponSwitch <= weapons.Count)
+            {
+                SwitchWeapon((int)input.weaponSwitch);
+            }
+            else
+            {
+                Debug.Log("weapon out of range");
+                input.weaponSwitch = null;
+            }
+        }
+
+
+        
         //tick all weapons that are not active
         for(int i = 0 ; i < weapons.Count ; i++)
         {
@@ -98,10 +122,10 @@ public class WeaponManager : NetworkBehaviour
             Vector3 offset = head.transform.forward * b.ParentWeapon.weaponAttributes.HitscanRange;
             b.Pos = offset + head.transform.position;
         }
-        visuals.createEffects(b);
+        visuals.createEffectsHitscan(b);
     }
     private void handelProjectile(Bullet b , Transform head)
     {
-
+        visuals.createEffectsProjectile(b);
     }
 }

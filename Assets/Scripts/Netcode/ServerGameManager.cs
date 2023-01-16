@@ -10,15 +10,13 @@ using static HighLevelNetcode;
 
 public class ServerGameManager : NetworkBehaviour
 {
-    private void Start()
-    {
-        ServerGameManagerRef.Instance = this;
-    }
+    #region hits and kills
     [ServerRpc(RequireOwnership = false)]
-    public void playerHit_ServerRpc(float damage , string PlayerObjectID_from , string PlayerObjectID_to)
+    public void playerHit_ServerRpc(float damage , string PlayerObjectID_from , string PlayerObjectID_to,int sendHitMarker_Bool = 0)
     {
         //get players
-        var playerTo = GetNetworkObject(ulong.Parse(PlayerObjectID_to));
+        Debug.Log("player to = " + PlayerObjectID_to);
+        NetworkObject playerTo = GetNetworkObject(ulong.Parse(PlayerObjectID_to));
         var playerFrom = GetNetworkObject(ulong.Parse(PlayerObjectID_from));
         var playerToAuth = gameStats.getAuthKeyFromObjectID(PlayerObjectID_to);
         var healthComp = playerTo.GetComponentInChildren<HealthHandle>();
@@ -28,7 +26,7 @@ public class ServerGameManager : NetworkBehaviour
         if(healthComp.health.Value <= 0)
         {
             healthComp.health.Value = healthComp.defaultHealth;
-            playerKilled_ClientRpc(PlayerObjectID_to);
+            playerKilled_ClientRpc(PlayerObjectID_to,playerFrom.NetworkObjectId.ToString());
             gameStats.playerStats[playerFromAuth].kills++;
             gameStats.playerStats[playerToAuth].deaths++;
             playerKIlled_ServerRpc(playerFromAuth , playerToAuth);
@@ -36,11 +34,11 @@ public class ServerGameManager : NetworkBehaviour
 
         gameStats.playerStats[playerToAuth].damageTaken += damage;
         gameStats.playerStats[playerFromAuth].damageDone += damage;
-        playerHit_ClientRpc(damage , PlayerObjectID_from , PlayerObjectID_to,healthComp.health.Value);
+        playerHit_ClientRpc(damage , PlayerObjectID_from , PlayerObjectID_to,healthComp.health.Value,sendHitMarker_Bool);
 
     }
     [ClientRpc]
-    public void playerHit_ClientRpc(float damage , string PlayerObjectID_from , string PlayerObjectID_to ,float currentHealth)
+    public void playerHit_ClientRpc(float damage , string PlayerObjectID_from , string PlayerObjectID_to ,float currentHealth,int sendHitmarker_Bool)
     {
         var playerTo = GetNetworkObject(ulong.Parse(PlayerObjectID_to));
 
@@ -48,6 +46,10 @@ public class ServerGameManager : NetworkBehaviour
         if(!playerTo.IsOwner)
             return;
         var playerFrom = GetNetworkObject(ulong.Parse(PlayerObjectID_from));
+        if(playerFrom.IsOwner && sendHitmarker_Bool ==1)
+        {
+            playerFrom.gameObject.GetComponentInChildren<PlayerUiManager>().showHitMarker(false);
+        }
 
         var pManager = playerTo.GetComponent<PlayerManager>();
         var visuals = pManager.weaponManager.visuals;
@@ -59,9 +61,9 @@ public class ServerGameManager : NetworkBehaviour
     }
 
     [ClientRpc]
-    public void playerKilled_ClientRpc(string id)
+    public void playerKilled_ClientRpc(string To_networkObjID,string From_NetworkObjID)
     {
-        var player = GetNetworkObject(ulong.Parse(id));
+        var player = GetNetworkObject(ulong.Parse(To_networkObjID));
         if(!player.IsOwner)
             return;
 
@@ -96,7 +98,8 @@ public class ServerGameManager : NetworkBehaviour
         var healthCmp = GetNetworkObject(playerObjectID).GetComponentInChildren<HealthHandle>();
         healthCmp.health.Value = healthCmp.defaultHealth;
     }
-
+    #endregion
+    #region misc management
     //server management vars
     public GameStatistics gameStats = null;
     public void ServerStart()
@@ -115,8 +118,12 @@ public class ServerGameManager : NetworkBehaviour
             gameStats.playerStats.Add(AuthenticationService.Instance.PlayerId , hostStats);
         }
     }
-
-    //ping pong system
+    private void Start()
+    {
+        ServerGameManagerRef.Instance = this;
+    }
+    #endregion
+    #region ping pong system
     [SerializeField] float pingRate;
     float timeTillPing = 1;
     ulong? PlayerObjectID = null;
@@ -127,7 +134,6 @@ public class ServerGameManager : NetworkBehaviour
         timeTillPing -= Time.fixedDeltaTime;
         if(timeTillPing <= 0)
         {
-            Debug.Log("requesting ping pong");
             timeTillPing = pingRate;
             pingClientRpc(JsonConvert.SerializeObject(gameStats));
         }
@@ -136,7 +142,7 @@ public class ServerGameManager : NetworkBehaviour
     [ClientRpc]
     private void pingClientRpc(string gameStatistic_Json)
     {
-        Debug.Log("json string \n" + gameStatistic_Json);
+       // Debug.Log("json string \n" + gameStatistic_Json);
         gameStats = JsonConvert.DeserializeObject<GameStatistics>(gameStatistic_Json);
         if(PlayerObjectID == null)
             PlayerObjectID = Camera.main.GetComponentInParent<NetworkObject>().NetworkObjectId;
@@ -152,7 +158,6 @@ public class ServerGameManager : NetworkBehaviour
         var dateTimeSent = new DateTime(sentTime);
         var dif = DateTime.Now - dateTimeSent;
         var pingMs = dif.Milliseconds;
-        Debug.Log("ping " + pingMs);
         if(gameStats.playerStats.TryGetValue(lobbyPlayerID , out var stats))
         {
             stats.ping = pingMs;
@@ -169,8 +174,8 @@ public class ServerGameManager : NetworkBehaviour
     {
         pingPong();
     }
-
-    //Local management
+    #endregion
+    #region Local management
     GameMode gameMode;
     public int Team;
     public List<spawnVolume> spawnVolumes;
@@ -227,6 +232,7 @@ public class ServerGameManager : NetworkBehaviour
     {
         Debug.Log("assigning team");
     }
+    #endregion
 }
 public class GameStatistics
 {

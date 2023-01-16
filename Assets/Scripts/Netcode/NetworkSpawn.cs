@@ -1,37 +1,67 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Mathematics;
 using Unity.Netcode;
+using Unity.Services.Authentication;
 using UnityEngine;
 
 public class NetworkSpawn : NetworkBehaviour
 {
+    #region misc
     public NetworkObjects nObjects;
 
     private void Awake()
     {
-        NetworkSerializer.spawner = this;
+        NetworkSerializer.SpawnerInstance = this;
     }
-
+    #endregion
+    #region serverSide spawning
     [ServerRpc(RequireOwnership = false)] //most types are not allowed so strings are what i use
-    public void networkSpawnObject_ServerRpc( string SobjNetworkIndex , string Spos ,    string Srot , string SclientId = "-1") 
+    public void networkSpawnObject_ServerRpc( string SobjNetworkIndex , string Spos ,    string Srot , string SsenderAuthID = "-1", int DataInt = 0,string SsenderNetworkObject = "-1") //dataInt contains a prefix which defines where to send the data  
     {
+        Debug.Log("SERVER SPAWNING " + DataInt);
        var obj = NetworkSerializer.deSerialize_objIndex(SobjNetworkIndex);
         var pos = NetworkSerializer.deSerialize_vector3(Spos);
         var rot = NetworkSerializer.deSerialize_quaternion(Srot);
 
          var x = Instantiate(obj, pos, rot);
         x.GetComponent<NetworkObject>().Spawn();
+
+        if(DataInt != 0) // 1000 = projectile 
+        {
+            if(DataInt.ToString()[0] == '1') //projectile
+            {
+                DataInt -= 1000;
+                var cmp =  x.GetComponent<ServerProjectile_Handel>();
+                cmp.SourceIndex = DataInt;
+                cmp.senderAuth = SsenderAuthID;
+                cmp.senderObjId = SsenderNetworkObject;
+                cmp.Init();
+            }
+          
+        }
     }
-
+    [ServerRpc(RequireOwnership = false)]
+    public void force_playerExplosion_ServerRpc(string Spos,string Sforce,string Sradius)
+    {
+        force_playerExplosion_ClientRpc(Spos, Sforce, Sradius);
+    }
+    [ClientRpc]
+    public void force_playerExplosion_ClientRpc(string Spos , string Sforce , string Sradius)
+    {
+        var pos = NetworkSerializer.deSerialize_vector3(Spos);
+        float force =  float.Parse( Sforce);
+        float radius = float.Parse( Sradius);
+        float upModifier = 0;
+        MainPlayer.Instance.rb.AddExplosionForce(force,pos,radius,upModifier);
+    }
+    #endregion
     #region local spawning
-
-
     [ClientRpc]
     private void localSpawnObject_ClientRpc(string SobjNetworkIndex , string Spos , string Srot , string SclientId)
     {
-        Debug.Log(SclientId + " sender vs sigleton.id " + NetworkManager.Singleton.LocalClientId);
-      if(SclientId == NetworkManager.Singleton.LocalClientId.ToString()) //if is sender, return. object has already been spawned by itself
+      if(SclientId == AuthenticationService.Instance.PlayerId) //if is sender, return. object has already been spawned by itself
           return;
 
         var obj = NetworkSerializer.deSerialize_objIndex(SobjNetworkIndex);
@@ -52,9 +82,8 @@ public class NetworkSpawn : NetworkBehaviour
 
     public void localSpawnObject(string SobjNetworkIndex , string Spos , string Srot , string SclientId = "-1")
     { 
-        if(SclientId == NetworkManager.Singleton.LocalClientId.ToString()) //if sent from this client, spawn instantly
+        if(SclientId == AuthenticationService.Instance.PlayerId) //if sent from this client, spawn instantly
         {
-            Debug.Log("self spawning");
             var obj = NetworkSerializer.deSerialize_objIndex(SobjNetworkIndex);
             var pos = NetworkSerializer.deSerialize_vector3(Spos);
             var rot = NetworkSerializer.deSerialize_quaternion(Srot);
@@ -67,11 +96,11 @@ public class NetworkSpawn : NetworkBehaviour
 }
 public static class NetworkSerializer
 {
-    public static NetworkSpawn spawner;
+    public static NetworkSpawn SpawnerInstance;
     public static GameObject deSerialize_objIndex(string input)
     {
         int i = int.Parse(input);
-        var objs = spawner.nObjects.objects;
+        var objs = SpawnerInstance.nObjects.objects;
         if(i > objs.Count())
         {
             Debug.Log("NetworkSerializer.DeserializeObj : input larger than object list");
@@ -109,7 +138,7 @@ public static class NetworkSerializer
 
     public static string serialize_obj(GameObject input)
     {
-        int i = spawner.nObjects.objects.IndexOf(input);
+        int i = SpawnerInstance.nObjects.objects.IndexOf(input);
         if(i < 0)
         {
             Debug.Log("NetworkSerializer.serializeObj : GameObject is not a network object");

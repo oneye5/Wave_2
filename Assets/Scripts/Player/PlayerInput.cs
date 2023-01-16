@@ -6,6 +6,7 @@ public struct PlayerInput
     public Vector3 keyState;
     public bool fire;
     public bool reload;
+    public uint? weaponSwitch;
     public void Tick()
     {
         mDelta.x = Input.GetAxisRaw("MouseX");
@@ -27,6 +28,16 @@ public struct PlayerInput
         if(Input.GetAxisRaw("Reload") != 0)
             reload = true;
         else reload = false;
+
+
+        if(Input.GetKeyDown("1"))
+            weaponSwitch = 0;
+        else if(Input.GetKeyDown("2"))
+            weaponSwitch = 1;
+        else if(Input.GetKeyDown("3"))
+            weaponSwitch = 2;
+        else
+            weaponSwitch = null;
     }
     public void Clear()
     {
@@ -34,5 +45,6 @@ public struct PlayerInput
         keyState = Vector3.zero;
         fire = false;
         reload = false;
+        weaponSwitch = null;
     }
 }
