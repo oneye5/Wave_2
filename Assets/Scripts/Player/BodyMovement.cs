@@ -1,7 +1,12 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Burst;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Playables;
+using UnityEngine.ProBuilder;
+using UnityEngine.Windows;
 
 public class BodyMovement : MonoBehaviour
 {
@@ -21,12 +26,15 @@ public class BodyMovement : MonoBehaviour
     [SerializeField] float A_maxVel;
     [SerializeField] float A_brakingForce;
     [SerializeField] float A_wishDirMargin;
-    [SerializeField] float A_strafeAccelMulti;
+    [SerializeField] float A_strafeVelAdd;
+
+    [SerializeField] float ChangeDir_Multi;
+    [SerializeField] float ChangeDir_Margin;
 
     [HideInInspector] public CapsuleCollider collider;
     bool grounded;
     bool justLanded;
-    Rigidbody rb;
+    [HideInInspector] public Rigidbody rb;
 
     private void Awake()
     {
@@ -34,10 +42,10 @@ public class BodyMovement : MonoBehaviour
         collider = GetComponent<CapsuleCollider>();
     }
 
-    public void Tick(PlayerInput input,Transform head)
+    public void Tick(PlayerInput input , Transform head)
     {
         checkGround();
-        move(input,head);
+        move(input , head);
     }
 
     void checkGround()
@@ -51,7 +59,7 @@ public class BodyMovement : MonoBehaviour
         {
             if(x.collider.tag != "notGround" && x.collider.tag != "Player" && x.distance < 0.1)
             {
-              //  Debug.Log("grounded " + x.collider.gameObject.name);
+                //  Debug.Log("grounded " + x.collider.gameObject.name);
 
                 grounded = true;
                 break;
@@ -68,24 +76,67 @@ public class BodyMovement : MonoBehaviour
         if(grounded != true)
             justLanded = false;
     }
-    void move(PlayerInput input ,Transform head)
+    void move(PlayerInput input , Transform head)
     {
-        var z = head.forward * input.keyState.z;
-        var x = head.right * input.keyState.x;
+        var z = head.forward * input.wasd.z;
+        var x = head.right * input.wasd.x;
         var normForce = z + x;
         normForce = new Vector3(normForce.x , 0 , normForce.z);
         normForce = normForce.normalized;
-
-        Vector3 force;
+        Vector2 xzVelocity = new Vector2(rb.velocity.x , rb.velocity.z);
+        Vector3 force = Vector3.zero;
         float vel = new Vector2(rb.velocity.x , rb.velocity.z).magnitude;
+
+
         if(grounded)
         {
-            force = normForce * G_accel;
+            var nonLinearForce = calculateNonLinear(vel , G_maxVel , new Vector2(normForce.x , normForce.z));
+            force = (normForce * G_accel)* nonLinearForce;
         }
         else
-        {
-            force = normForce * A_accel;
+        { //there are two air movement modes, one is air strafing with mouse and the other is basic wasd movement
+
+
+
+            //check that wasd and mouse are going in the same direction
+            float changeDir = 0;
+            if(input.wasd.x > 0 && input.mouseDelta.x > 0
+                ||
+                input.wasd.x < 0 && input.mouseDelta.x < 0)
+            {
+                changeDir = input.mouseDelta.x;
+            }
+            if(changeDir == 0)
+                goto basicWasd;
+
+            //check the angle change is within margin
+            
+            float velocityAngle = MathF.Atan2(xzVelocity.x , xzVelocity.y); // is in radians
+            float velHeadDeltaAngle = Mathf.DeltaAngle(head.rotation.eulerAngles.y, velocityAngle * Mathf.Rad2Deg);
+            if(Mathf.Abs(velHeadDeltaAngle) > A_wishDirMargin)
+                goto basicWasd;
+
+            //checks complete, now calculate new velocity
+
+            float newVelocityMagnitude = xzVelocity.magnitude + A_strafeVelAdd;
+            float newAngle = Mathf.Deg2Rad * head.rotation.eulerAngles.y;
+            Vector3 newVel = new Vector3(Mathf.Sin(newAngle) * newVelocityMagnitude, rb.velocity.y , Mathf.Cos(newAngle) * newVelocityMagnitude);
+            rb.velocity = newVel;
+
+
+
+
+            //DEFAULT AIR MOVE ===========================
+
+
+            goto continueWithMovement;
+        basicWasd:
+          
+           var nonLinearForce =  calculateNonLinear(vel,A_maxVel,new Vector2(normForce.x,normForce.z));
+            force = (normForce * A_accel) * nonLinearForce;
         }
+        continueWithMovement:
+
 
         //friction
         if(grounded)
@@ -96,21 +147,43 @@ public class BodyMovement : MonoBehaviour
             }
             else
             {
-                rb.velocity = new Vector3(rb.velocity.x * G_friction, rb.velocity.y , rb.velocity.z * G_friction);
+                rb.velocity = new Vector3(rb.velocity.x * G_friction , rb.velocity.y , rb.velocity.z * G_friction);
             }
         }
         else
         {
-            rb.velocity = new Vector3(rb.velocity.x * A_friction, rb.velocity.y , rb.velocity.z * A_friction);
+            rb.velocity = new Vector3(rb.velocity.x * A_friction , rb.velocity.y , rb.velocity.z * A_friction);
         }
 
         //jumping
 
-        if(input.keyState.y == 1 && grounded == true)
+        if(input.wasd.y == 1 && grounded == true)
         {
             rb.velocity = new Vector3(rb.velocity.x , G_jumpForce , rb.velocity.z);
         }
         //apply force
-        rb.AddForce(force);
+        if(force == Vector3.zero)
+            return;
+
+        rb.AddForce(force,ForceMode.Acceleration);
+    }
+
+    float calculateNonLinear(float vel,float maxVel,Vector2 wishDir)
+    {
+        var v1 = new Vector3(rb.velocity.x , 0 , rb.velocity.z);
+        var v2 = new Vector3(wishDir.x , 0 , wishDir.y);
+        v1 = v1.normalized;
+        v2 = v2.normalized;
+
+        float dif = Vector3.Dot(v1 , v2);
+        if(dif > ChangeDir_Margin)
+            dif = 0;
+        
+        dif *= ChangeDir_Multi;
+        dif = Mathf.Abs(dif);
+
+        float outM = maxVel / (1 + MathF.Abs(vel));
+        outM +=dif;
+        return outM;
     }
 }

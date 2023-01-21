@@ -7,10 +7,12 @@ using UnityEngine.UI;
 
 public class PlayerUiManager : MonoBehaviour
 {
+    private PlayerManager playerManager;
+
     private float timeTillSeccondTick;
     [SerializeField] HealthHandle healthHandle;
     [SerializeField] TMPro.TextMeshProUGUI healthText;
-
+    
 
     public Image hitMarker;
     public Color hitCol;
@@ -27,6 +29,8 @@ public class PlayerUiManager : MonoBehaviour
     List<GameObject> playerListElements = new List<GameObject>();
     List<TextReferences> playerList_TextRefs = new List<TextReferences>();
     List<string> playerAuthIdPerElem = new List<string>();
+
+    [SerializeField] TMPro.TextMeshProUGUI velocityText;
     private void Start()
     {
         hitMarker.color = Color.clear;
@@ -41,8 +45,23 @@ public class PlayerUiManager : MonoBehaviour
     {
         tickHitMarker();
         tickHealthText();
+        playerVelTick();
+
         oneSeccondTick();
         TickTabPlayerMenu();
+    }
+    public void playerVelTick()
+    {
+        try
+        {
+            if(playerManager == null)
+                playerManager = MainPlayer.Instance;
+            velocityText.text = Mathf.RoundToInt(new Vector2(playerManager.bodyMovement.rb.velocity.x , playerManager.rb.velocity.z).magnitude).ToString();
+        }
+        catch
+        {
+
+        }
     }
     public void oneSeccondTick()
     {

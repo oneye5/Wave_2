@@ -42,7 +42,7 @@ public class WeaponAttributes
     public float ProjectileLifetime;
 
     public bool AreaDamage;
-
+    public float AreaMaxSelfDamage;
     public float AreaRadius;
     public float AreaImpulse;
 
@@ -114,14 +114,14 @@ public class WeaponAttributes
                 
 
                 ProjectileGravity = 0;
-                ProjectileImpulse = 1;
+                ProjectileImpulse = 50;
                 ProjectileDrag = 0;
-                ProjectileLifetime = 10;
+                ProjectileLifetime = 4;
 
                 AreaDamage = true;
-                AreaImpulse = 10;
-                AreaRadius = 5;
-
+                AreaImpulse = 130000;
+                AreaRadius = 4f;
+                AreaMaxSelfDamage = 10;
 
                 Recoil_camJump = new Vector3(-2 , 0 , 0);
                 Recoil_camJumpRecovery = 0.75f;

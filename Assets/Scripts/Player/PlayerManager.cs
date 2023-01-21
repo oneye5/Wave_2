@@ -77,8 +77,10 @@ public class PlayerManager : NetworkBehaviour
         weaponManager.Tick(playerInput , headMovement.gameObject.transform);
 
         if(!resetting)
-        bodyMovement.Tick(playerInput , headMovement.gameObject.transform);
-
+        {
+            bodyMovement.Tick(playerInput , headMovement.gameObject.transform);
+            CheckInsideMapBounds();
+        }
         mouseLockStateTick();
     }
     private void LateUpdate()
@@ -108,6 +110,11 @@ public class PlayerManager : NetworkBehaviour
         StartCoroutine( resetWithDelay(4f,localOffset));
         
     }
+    private void CheckInsideMapBounds()
+    {
+        if(rb.position.y < -150)
+            ResetPlayer();
+    }
     IEnumerator resetWithDelay(float delay,Vector3 localHeadPos)
     {
         yield return new WaitForSeconds(delay);
@@ -126,6 +133,7 @@ public class PlayerManager : NetworkBehaviour
         rb.useGravity = true;
         bodyMovement.collider.enabled = true;
         rb.velocity = new Vector3 (0 , 0 , 0);
+        weaponManager.ActiveWeapon = 0;
     }
 
     private bool winFocus;

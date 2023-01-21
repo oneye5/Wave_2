@@ -5,7 +5,7 @@ using Unity.Services.Authentication;
 using Unity.VisualScripting;
 using UnityEngine;
 
-public class ServerProjectile_Handel : NetworkBehaviour
+public class ServerProjectile_Handle : NetworkBehaviour
 {
     [SerializeField] float lifetime;
        [HideInInspector] public int SourceIndex;
@@ -13,6 +13,8 @@ public class ServerProjectile_Handel : NetworkBehaviour
     float gravity;
        public string senderAuth;
     public string senderObjId;
+
+    bool destroying = false;
     public void Init()
     {
         if(!(IsHost || IsServer))
@@ -35,8 +37,17 @@ public class ServerProjectile_Handel : NetworkBehaviour
     }
     private void OnTriggerEnter(Collider hit)
     {
-        if(hit.tag == "Player")
+        if(destroying)
             return;
+        //check if is player, if it is the sender then return
+        try
+        {
+            var networkOb = hit.GetComponentInParent<NetworkObject>();
+            if(networkOb.NetworkObjectId.ToString() == senderObjId)
+                return;
+        }
+        catch { }
+       
 
         if(WeaponStatsCache.weaponAttributes[SourceIndex].AreaDamage)
         {
@@ -81,8 +92,39 @@ public class ServerProjectile_Handel : NetworkBehaviour
             }
         }
 
+        //make sure the same player does not get hit multiple times
+        //if multiple hits to the same player exist, keep the closest one
+        List<GameObject> filteredHitPlayers = new List<GameObject>();
+        List<ulong> networkIds = new List<ulong>();
+        foreach(var p in HitPlayers)
+        {
+           var networkObj = p.GetComponentInParent<NetworkObject>();
+            var id = networkObj.NetworkObjectId;
+
+            if(networkIds.Contains(id))
+            {
+              int index =  networkIds.IndexOf(id);
+                float distanceA = Vector3.Distance(transform.position , p.transform.position);
+                float distanceB = Vector3.Distance(transform.position , filteredHitPlayers[index].transform.position);
+
+                if(distanceA < distanceB)
+                {
+                    filteredHitPlayers[index] = p;
+                    networkIds[index] = id;
+                }
+                else
+                    continue; //closest contact to player collider already found, go next
+            }
+            else
+            {
+                filteredHitPlayers.Add(p);
+                networkIds.Add(id);
+            }
+        }
+        HitPlayers = filteredHitPlayers;
 
         //check los to player
+        bool playerHit = false;
         foreach(var x in HitPlayers)
         {
             Debug.Log("checking los to Player");
@@ -105,13 +147,47 @@ public class ServerProjectile_Handel : NetworkBehaviour
                 damage = damage * distNormalized;
                 damage = Mathf.Round(damage);
 
+                if(toID == senderObjId) //self damage 
+                {
+                    damage *= 0.5f;
+                    damage = Mathf.Clamp(damage , 0 , WeaponStatsCache.weaponAttributes[SourceIndex].AreaMaxSelfDamage);
+                }
                 ServerGameManagerRef.Instance.playerHit_ServerRpc(damage , senderObjId , toID,1);
-
-                string pos = NetworkSerializer.serialize_vector3(transform.position);
-                NetworkSerializer.SpawnerInstance.force_playerExplosion_ServerRpc(pos , WeaponStatsCache.weaponAttributes[SourceIndex].AreaImpulse.ToString() , WeaponStatsCache.weaponAttributes[SourceIndex].AreaRadius.ToString()); 
+                playerHit = true;
+               
             }
         }
-       
+
+        //spawn force
+        if(playerHit)
+        {
+            string pos = NetworkSerializer.serialize_vector3(transform.position);
+
+            NetworkSerializer.SpawnerInstance.force_playerExplosion_ServerRpc(
+                pos ,
+                WeaponStatsCache.weaponAttributes[SourceIndex].AreaImpulse.ToString() ,
+                WeaponStatsCache.weaponAttributes[SourceIndex].AreaRadius.ToString());
+        }
+        //spawn hit effect
+        string sObj;
+        string sPos;
+        string sRot;
+        string sender;
+        GameObject obj;
+        Vector3 pos2;
+        Quaternion rot;
+        obj = MainPlayer.Instance.weaponManager.visuals.HitEffects[ WeaponStatsCache.weaponAttributes[SourceIndex].HitIndex];
+        pos2 = transform.position;
+        rot = transform.rotation;
+        sObj = NetworkSerializer.serialize_obj(obj); //convert into strings for use over network
+        sPos = NetworkSerializer.serialize_vector3(pos2);
+        sRot = NetworkSerializer.serialize_quaternion(rot);
+        sender = AuthenticationService.Instance.PlayerId;
+
+        NetworkSerializer.SpawnerInstance.localSpawnObject(sObj, sPos, sRot,sender);
+
+        destroying = true;
+        Destroy(this.gameObject,1.0f);
     }
     private void DirectHit(Collider hit)
     {

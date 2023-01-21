@@ -18,7 +18,7 @@ public class WeaponManager : NetworkBehaviour
         cam = Camera.main;
     }
     public List<Weapon> weapons = new List<Weapon>();
-    int ActiveWeapon; // refers to index of weapons
+    [HideInInspector] public int ActiveWeapon; // refers to index of weapons
     public void AddWeapon(WeaponTypes type)
     {
         Weapon w = new Weapon(type);

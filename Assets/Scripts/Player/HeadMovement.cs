@@ -10,15 +10,15 @@ public class HeadMovement : MonoBehaviour
     public void Tick(PlayerInput inputIn)
     {
         var input = inputIn;
-        input.mDelta *= sense;
+        input.mouseDelta *= sense;
 
         Vector2 pitchConstraints = new Vector2Int(-89 , 89);
 
         Vector3 rot = transform.localRotation.eulerAngles;
         rot = new Vector3(rot.x , rot.y , 0);
-        float pitchChange = -input.mDelta.y;
+        float pitchChange = -input.mouseDelta.y;
         //constrain pitch
-        rot = new Vector3(pitchChange + rot.x , input.mDelta.x + rot.y , 0);
+        rot = new Vector3(pitchChange + rot.x , input.mouseDelta.x + rot.y , 0);
         actualPitch += pitchChange;
         if(actualPitch < pitchConstraints.x)
         {

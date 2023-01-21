@@ -2,19 +2,19 @@ using UnityEngine;
 
 public struct PlayerInput
 {
-    public Vector2 mDelta;
-    public Vector3 keyState;
+    public Vector2 mouseDelta;
+    public Vector3 wasd;
     public bool fire;
     public bool reload;
     public uint? weaponSwitch;
     public void Tick()
     {
-        mDelta.x = Input.GetAxisRaw("MouseX");
-        mDelta.y = Input.GetAxisRaw("MouseY");
+        mouseDelta.x = Input.GetAxisRaw("MouseX");
+        mouseDelta.y = Input.GetAxisRaw("MouseY");
 
-        keyState.x = Input.GetAxisRaw("MoveX");
-        keyState.y = Input.GetAxisRaw("MoveY");
-        keyState.z = Input.GetAxisRaw("MoveZ");
+        wasd.x = Input.GetAxisRaw("MoveX");
+        wasd.y = Input.GetAxisRaw("MoveY");
+        wasd.z = Input.GetAxisRaw("MoveZ");
 
 
 
@@ -41,8 +41,8 @@ public struct PlayerInput
     }
     public void Clear()
     {
-        mDelta = Vector2.zero;
-        keyState = Vector3.zero;
+        mouseDelta = Vector2.zero;
+        wasd = Vector3.zero;
         fire = false;
         reload = false;
         weaponSwitch = null;

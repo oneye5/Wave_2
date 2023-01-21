@@ -10,7 +10,7 @@ public class NetworkSpawn : NetworkBehaviour
 {
     #region misc
     public NetworkObjects nObjects;
-
+    [SerializeField] float explosion_Verticality_Modifier;
     private void Awake()
     {
         NetworkSerializer.SpawnerInstance = this;
@@ -33,7 +33,7 @@ public class NetworkSpawn : NetworkBehaviour
             if(DataInt.ToString()[0] == '1') //projectile
             {
                 DataInt -= 1000;
-                var cmp =  x.GetComponent<ServerProjectile_Handel>();
+                var cmp =  x.GetComponent<ServerProjectile_Handle>();
                 cmp.SourceIndex = DataInt;
                 cmp.senderAuth = SsenderAuthID;
                 cmp.senderObjId = SsenderNetworkObject;
@@ -53,15 +53,15 @@ public class NetworkSpawn : NetworkBehaviour
         var pos = NetworkSerializer.deSerialize_vector3(Spos);
         float force =  float.Parse( Sforce);
         float radius = float.Parse( Sradius);
-        float upModifier = 0;
-        MainPlayer.Instance.rb.AddExplosionForce(force,pos,radius,upModifier);
+        Debug.Log("explosion force added to this player ");
+        MainPlayer.Instance.rb.AddExplosionForce(force,pos + new Vector3(0,0.5f,0),radius,explosion_Verticality_Modifier);
     }
     #endregion
     #region local spawning
     [ClientRpc]
-    private void localSpawnObject_ClientRpc(string SobjNetworkIndex , string Spos , string Srot , string SclientId)
+    private void localSpawnObject_ClientRpc(string SobjNetworkIndex , string Spos , string Srot , string senderAuth)
     {
-      if(SclientId == AuthenticationService.Instance.PlayerId) //if is sender, return. object has already been spawned by itself
+      if(senderAuth == AuthenticationService.Instance.PlayerId) //if is sender, return. object has already been spawned by itself
           return;
 
         var obj = NetworkSerializer.deSerialize_objIndex(SobjNetworkIndex);
@@ -73,16 +73,16 @@ public class NetworkSpawn : NetworkBehaviour
 
 
     [ServerRpc(RequireOwnership = false)]
-    private void localSpawnObject_ServerRpc(string SobjNetworkIndex , string Spos , string Srot  , string SclientId)
+    private void localSpawnObject_ServerRpc(string SobjNetworkIndex , string Spos , string Srot  , string senderAuth)
     {
-        localSpawnObject_ClientRpc(SobjNetworkIndex , Spos , Srot , SclientId); 
+        localSpawnObject_ClientRpc(SobjNetworkIndex , Spos , Srot , senderAuth); 
     }
 
 
 
-    public void localSpawnObject(string SobjNetworkIndex , string Spos , string Srot , string SclientId = "-1")
+    public void localSpawnObject(string SobjNetworkIndex , string Spos , string Srot , string senderAuth = "-1")
     { 
-        if(SclientId == AuthenticationService.Instance.PlayerId) //if sent from this client, spawn instantly
+        if(senderAuth == AuthenticationService.Instance.PlayerId) //if sent from this client, spawn instantly
         {
             var obj = NetworkSerializer.deSerialize_objIndex(SobjNetworkIndex);
             var pos = NetworkSerializer.deSerialize_vector3(Spos);
@@ -90,7 +90,7 @@ public class NetworkSpawn : NetworkBehaviour
 
             var x = Instantiate(obj , pos , rot);
         }
-        localSpawnObject_ServerRpc(SobjNetworkIndex, Spos , Srot ,  SclientId); //data sent to server, server sends to every client
+        localSpawnObject_ServerRpc(SobjNetworkIndex, Spos , Srot ,  senderAuth); //data sent to server, server sends to every client
     }
     #endregion
 }
